@@ -3,366 +3,400 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>China vs US — Where Are the Markets Heading</title>
+<title>China Company Analyzer</title>
 <style>
   :root{
-    --bg:#ffffff;
-    --ink:#1c2b3a;          /* headings — deep navy, warmer than black */
-    --body:#3d4f61;         /* body copy */
-    --soft:#6b7f92;         /* secondary */
-    --faint:#93a3b3;
-    --rule:#e3e9ef;
-    --panel:#f7f9fb;
-
-    --cn:#c8342b;           /* China */
-    --cn-soft:#fdf1f0;
-    --us:#1f5fa9;           /* United States */
-    --us-soft:#eef4fb;
-
-    --sans:Calibri,"Segoe UI",Candara,"Avenir Next","Trebuchet MS",
-           "Helvetica Neue",Arial,sans-serif;
+    --bg:#ffffff; --ink:#1c2b3a; --body:#3d4f61; --soft:#6b7f92; --faint:#94a4b4;
+    --rule:#e4eaf0; --panel:#f7f9fb; --accent:#b3392e; --accent-soft:#fdf2f0;
+    --blue:#1f5fa9; --blue-soft:#eef4fb; --green:#1a7f4b;
+    --sans:Calibri,"Segoe UI",Candara,"Avenir Next","Trebuchet MS","Helvetica Neue",Arial,sans-serif;
   }
   *{box-sizing:border-box}
-  html{scroll-behavior:smooth}
-  body{margin:0;background:var(--bg);color:var(--body);
-    font-family:var(--sans);font-size:17px;line-height:1.65;
-    -webkit-font-smoothing:antialiased;}
-  .wrap{max-width:1080px;margin:0 auto;padding:0 28px 90px}
-  /* The header sits in its own .wrap, whose 90px bottom padding would
-     otherwise open a dead gap above the sticky nav. */
-  .wrap.head{padding-bottom:0}
-
+  body{margin:0;background:var(--bg);color:var(--body);font-family:var(--sans);
+    font-size:17px;line-height:1.6;-webkit-font-smoothing:antialiased}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 26px 80px}
   h1,h2,h3{color:var(--ink);font-weight:600;letter-spacing:-.015em;margin:0}
-  h1{font-size:44px;line-height:1.14}
-  h2{font-size:29px;line-height:1.25}
-  h3{font-size:19px}
-  p{margin:0 0 16px}
+  h1{font-size:38px;line-height:1.15}
+  h2{font-size:24px}
+  h3{font-size:15px;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);
+     font-weight:600;margin-bottom:14px}
 
-  /* ---------- header ---------- */
-  header{padding:70px 0 40px}
-  .kicker{color:var(--cn);font-weight:600;font-size:14px;letter-spacing:.13em;
-    text-transform:uppercase;margin-bottom:18px}
-  .kicker span{color:var(--us)}
-  .lede{font-size:20px;color:var(--soft);max-width:60ch;margin-top:20px}
-  .built{margin-top:26px;font-size:14px;color:var(--faint)}
+  header{padding:52px 0 26px}
+  .kicker{color:var(--accent);font-weight:600;font-size:13.5px;letter-spacing:.13em;
+    text-transform:uppercase;margin-bottom:14px}
+  .lede{font-size:19px;color:var(--soft);max-width:60ch;margin:14px 0 0}
 
-  /* ---------- nav ---------- */
-  nav{position:sticky;top:0;background:rgba(255,255,255,.94);
-    backdrop-filter:blur(8px);border-bottom:1px solid var(--rule);z-index:20;
-    margin-bottom:44px}
-  nav .inner{max-width:1080px;margin:0 auto;padding:13px 28px;
-    display:flex;gap:26px;flex-wrap:wrap;font-size:15px}
-  nav a{color:var(--soft);text-decoration:none;font-weight:500;white-space:nowrap}
-  nav a:hover{color:var(--cn)}
+  /* search */
+  .searchbar{position:relative;margin:30px 0 16px}
+  #q{width:100%;padding:17px 20px 17px 50px;font-size:19px;font-family:var(--sans);
+    border:2px solid var(--rule);border-radius:11px;color:var(--ink);outline:none;
+    background:#fff}
+  #q:focus{border-color:var(--accent)}
+  .searchbar svg{position:absolute;left:17px;top:50%;transform:translateY(-50%);
+    width:20px;height:20px;fill:none;stroke:var(--faint);stroke-width:2}
+  .filters{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:8px}
+  .chip{border:1px solid var(--rule);background:#fff;color:var(--soft);
+    padding:6px 14px;border-radius:20px;font-size:14px;cursor:pointer;
+    font-family:var(--sans)}
+  .chip:hover{border-color:var(--faint)}
+  .chip.on{background:var(--ink);border-color:var(--ink);color:#fff}
+  .count{color:var(--faint);font-size:14.5px;margin:10px 0 18px}
 
-  /* ---------- scoreboard ---------- */
-  .board{border:1px solid var(--rule);border-radius:12px;overflow:hidden;margin-bottom:26px}
-  .board-head{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.1fr;
-    background:var(--panel);padding:13px 20px;font-size:13px;font-weight:600;
-    letter-spacing:.07em;text-transform:uppercase;color:var(--faint);
-    border-bottom:1px solid var(--rule)}
-  .board-row{display:grid;grid-template-columns:1.5fr 1fr 1fr 1.1fr;
-    padding:16px 20px;align-items:center;border-bottom:1px solid var(--rule);
-    text-decoration:none;color:inherit}
-  .board-row:last-child{border-bottom:none}
-  .board-row:hover{background:var(--panel)}
-  .board-row .sec{font-weight:600;color:var(--ink);font-size:17px}
-  .pct{font-size:21px;font-weight:600;font-variant-numeric:tabular-nums}
-  .pct.cn{color:var(--cn)} .pct.us{color:var(--us)}
-  .winner{display:inline-block;font-size:13px;font-weight:600;padding:4px 11px;
-    border-radius:20px;letter-spacing:.02em}
-  .w-cn{background:var(--cn-soft);color:var(--cn)}
-  .w-us{background:var(--us-soft);color:var(--us)}
-  .w-tie{background:#f0f2f4;color:var(--soft)}
+  /* grid */
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:12px}
+  .card{border:1px solid var(--rule);border-radius:11px;padding:16px 17px;cursor:pointer;
+    background:#fff;transition:border-color .12s,transform .12s}
+  .card:hover{border-color:var(--ink);transform:translateY(-2px)}
+  .card .tk{font-size:12.5px;color:var(--faint);letter-spacing:.05em}
+  .card .nm{font-size:17.5px;font-weight:600;color:var(--ink);margin:2px 0 9px;line-height:1.3}
+  .card .mc{font-size:14.5px;color:var(--soft)}
+  .badge{display:inline-block;font-size:12px;font-weight:600;padding:3px 9px;
+    border-radius:20px;margin-top:10px}
 
-  .takeaway{background:var(--panel);border-left:4px solid var(--cn);
-    padding:22px 26px;border-radius:0 10px 10px 0;margin:34px 0 10px}
-  .takeaway h3{margin-bottom:9px}
-  .takeaway p{margin:0;color:var(--body)}
+  /* detail */
+  #detail{display:none}
+  .back{background:none;border:none;color:var(--accent);font-size:16px;cursor:pointer;
+    padding:0;font-family:var(--sans);font-weight:600;margin:34px 0 20px}
+  .dhead{border-bottom:1px solid var(--rule);padding-bottom:22px;margin-bottom:26px}
+  .dmeta{color:var(--soft);font-size:15.5px;margin-top:8px}
+  .dmeta b{color:var(--body);font-weight:600}
+  .summary{font-size:17px;color:var(--body);max-width:74ch;margin:18px 0 0}
 
-  /* ---------- sector ---------- */
-  .sector{padding-top:58px;border-top:1px solid var(--rule);margin-top:58px}
-  .sector-blurb{font-size:18px;color:var(--soft);max-width:64ch;margin-top:12px}
+  .verdict{background:var(--panel);border-left:4px solid var(--accent);
+    border-radius:0 10px 10px 0;padding:18px 22px;margin:24px 0}
+  .verdict ul{margin:0;padding-left:19px}
+  .verdict li{margin-bottom:7px}
+  .verdict li:last-child{margin-bottom:0}
 
-  .versus{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin:30px 0 26px}
-  .vcard{border-radius:11px;padding:20px 22px}
-  .vcard.cn{background:var(--cn-soft)} .vcard.us{background:var(--us-soft)}
-  .vcard .who{font-size:14px;font-weight:600;letter-spacing:.09em;text-transform:uppercase}
-  .vcard.cn .who{color:var(--cn)} .vcard.us .who{color:var(--us)}
-  .vcard .big{font-size:37px;font-weight:600;line-height:1.1;margin:7px 0 2px;
-    font-variant-numeric:tabular-nums}
-  .vcard.cn .big{color:var(--cn)} .vcard.us .big{color:var(--us)}
-  .vcard .cap{font-size:14.5px;color:var(--soft)}
+  /* Ground stays white, cells carry their own rules. A grey container showed
+     through as a filler block whenever the last row was short. */
+  .metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));
+    background:#fff;border:1px solid var(--rule);border-radius:11px;
+    overflow:hidden;margin-bottom:26px}
+  .m{background:#fff;padding:14px 16px;
+     border-right:1px solid var(--rule);border-bottom:1px solid var(--rule)}
+  .m .k{font-size:12.5px;color:var(--faint);margin-bottom:3px}
+  .m .v{font-size:19px;font-weight:600;color:var(--ink);font-variant-numeric:tabular-nums}
+  .m .v.pos{color:var(--green)} .m .v.neg{color:var(--accent)}
 
-  .chartbox{border:1px solid var(--rule);border-radius:12px;padding:22px;margin-bottom:26px}
+  .box{border:1px solid var(--rule);border-radius:11px;padding:20px 22px;margin-bottom:22px}
   .chart{width:100%;height:auto;display:block}
-  .legend{display:flex;gap:22px;margin-bottom:14px;font-size:15px;font-weight:500}
-  .legend i{display:inline-block;width:22px;height:3px;border-radius:2px;
-    margin-right:8px;vertical-align:4px}
-  .cap-note{font-size:14.5px;color:var(--faint);margin-top:14px;line-height:1.5}
 
-  /* stats strip */
-  .stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));
-    gap:1px;background:var(--rule);border:1px solid var(--rule);
-    border-radius:11px;overflow:hidden;margin-bottom:30px}
-  .stat{background:#fff;padding:15px 17px}
-  .stat .k{font-size:13px;color:var(--faint);margin-bottom:5px}
-  .stat .pair{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
-  .stat .v{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
-  .stat .v.cn{color:var(--cn)} .stat .v.us{color:var(--us)}
+  /* US exposure — the centrepiece */
+  .us{border:2px solid var(--ink);border-radius:13px;overflow:hidden;margin:30px 0}
+  .us-head{background:var(--ink);color:#fff;padding:15px 22px}
+  .us-head .t{font-size:19px;font-weight:600}
+  .us-head .s{font-size:14px;opacity:.75;margin-top:2px}
+  .us-body{display:grid;grid-template-columns:1fr 1fr}
+  .us-col{padding:20px 22px}
+  .us-col+.us-col{border-left:1px solid var(--rule)}
+  .us-col h4{margin:0 0 4px;font-size:15px;color:var(--ink)}
+  .us-col .how{font-size:12.5px;color:var(--faint);margin-bottom:14px}
+  .verdict-badge{display:inline-block;font-size:15px;font-weight:600;padding:7px 15px;
+    border-radius:8px;margin-bottom:13px}
+  .kv{display:flex;justify-content:space-between;gap:12px;padding:7px 0;
+    border-bottom:1px solid var(--rule);font-size:15px}
+  .kv:last-child{border-bottom:none}
+  .kv .kk{color:var(--soft)} .kv .vv{font-weight:600;color:var(--ink);
+    font-variant-numeric:tabular-nums;text-align:right}
+  .pol{margin:12px 0 0;padding-left:18px;font-size:14.5px;color:var(--body)}
+  .pol li{margin-bottom:5px}
+  .chan{font-size:15px;margin-bottom:10px}
+  .curnote{font-size:14px;color:var(--soft);font-style:italic;margin-top:12px;
+    padding-top:12px;border-top:1px solid var(--rule)}
+  .conf{font-size:12px;color:var(--faint);margin-top:12px}
+  .barwrap{height:8px;background:var(--rule);border-radius:5px;overflow:hidden;margin:9px 0 4px}
+  .barwrap span{display:block;height:100%;border-radius:5px;background:var(--blue)}
 
-  /* tables */
-  .tables{display:grid;grid-template-columns:1fr;gap:26px}
-  .tbl-wrap{overflow-x:auto;border:1px solid var(--rule);border-radius:11px}
-  .tbl-title{font-size:15px;font-weight:600;padding:14px 18px;
-    border-bottom:1px solid var(--rule)}
-  .tbl-title.cn{color:var(--cn);background:var(--cn-soft)}
-  .tbl-title.us{color:var(--us);background:var(--us-soft)}
   table{width:100%;border-collapse:collapse;font-size:15px}
-  th,td{padding:11px 14px;text-align:right;border-bottom:1px solid var(--rule);
-    white-space:nowrap}
-  th:first-child,td:first-child{text-align:left;white-space:normal;min-width:170px}
-  tr:last-child td{border-bottom:none}
-  th{font-size:12.5px;letter-spacing:.05em;text-transform:uppercase;
-    color:var(--faint);font-weight:600;background:#fcfdfe}
+  th,td{padding:9px 12px;text-align:right;border-bottom:1px solid var(--rule)}
+  th:first-child,td:first-child{text-align:left}
+  th{font-size:12px;letter-spacing:.05em;text-transform:uppercase;color:var(--faint)}
   td{font-variant-numeric:tabular-nums}
-  td.name{font-weight:600;color:var(--ink);font-variant-numeric:normal}
-  td.pos{color:#1a7f4b} td.neg{color:#b3392e}
-  .young{font-size:12px;color:var(--faint);font-weight:400;display:block;
-    font-variant-numeric:normal}
+  tr:last-child td{border-bottom:none}
+  td.pos{color:var(--green)} td.neg{color:var(--accent)}
 
-  .note{background:#fffaf0;border:1px solid #f0e2c8;border-radius:10px;
-    padding:16px 19px;font-size:15px;color:#7a6234;margin-bottom:26px}
-  .note b{color:#5f4c26}
+  ul.lim{padding-left:20px;color:var(--soft);font-size:15.5px}
+  ul.lim li{margin-bottom:9px}
+  footer{margin-top:60px;padding-top:22px;border-top:1px solid var(--rule);
+    color:var(--faint);font-size:14px}
+  .empty{padding:50px 0;text-align:center;color:var(--faint)}
 
-  ul.lim{padding-left:22px;color:var(--soft);font-size:16px}
-  ul.lim li{margin-bottom:11px}
-
-  footer{margin-top:70px;padding-top:26px;border-top:1px solid var(--rule);
-    color:var(--faint);font-size:14.5px}
-
-  @media(max-width:820px){
-    h1{font-size:32px} h2{font-size:24px}
-    .versus{grid-template-columns:1fr}
-    .board-head{display:none}
-    .board-row{grid-template-columns:1fr 1fr;gap:8px 14px}
-    .board-row .sec{grid-column:1/-1}
+  @media(max-width:760px){
+    h1{font-size:29px}
+    .us-body{grid-template-columns:1fr}
+    .us-col+.us-col{border-left:none;border-top:1px solid var(--rule)}
   }
 </style>
 </head>
 <body>
-
-<div class="wrap head" id="top">
-<header>
-  <div class="kicker">China <span>vs</span> United States</div>
-  <h1>Where are the markets heading?</h1>
-  <p class="lede" id="lede"></p>
-  <div class="built" id="built"></div>
-</header>
-</div>
-
-<nav><div class="inner" id="nav"></div></nav>
-
 <div class="wrap">
-  <h2>The scoreboard</h2>
-  <p style="max-width:62ch;margin-top:10px">Ten-year annualised return for an equal-weight
-     basket of roughly ten leading companies on each side. This is what an investor would
-     have earned, not a measure of how big the businesses are.</p>
 
-  <div class="board" id="board"></div>
-  <div id="takeaway"></div>
+  <div id="listview">
+    <header>
+      <div class="kicker">China Company Analyzer</div>
+      <h1>Look up a Chinese company.</h1>
+      <p class="lede" id="lede"></p>
+    </header>
 
-  <div id="sectors"></div>
+    <div class="searchbar">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+      <input id="q" type="text" placeholder="Type a ticker or company name — BYD, 0981.HK, Tencent…"
+             autocomplete="off" spellcheck="false">
+    </div>
+    <div class="filters" id="secFilters"></div>
+    <div class="filters" id="usFilters"></div>
+    <div class="count" id="count"></div>
+    <div class="grid" id="grid"></div>
+    <div class="empty" id="empty" style="display:none">No company matches that.</div>
 
-  <h2 style="margin-top:70px">What this comparison cannot tell you</h2>
-  <ul class="lim" id="lim"></ul>
+    <h2 style="margin-top:56px">What this can and cannot tell you</h2>
+    <ul class="lim" id="lim"></ul>
+    <footer id="footer"></footer>
+  </div>
 
-  <footer id="footer"></footer>
+  <div id="detail"></div>
 </div>
 
 <script src="data.js"></script>
 <script>
 (function(){
-  const D = window.VERSUS;
-  if(!D){document.body.innerHTML =
-    '<div style="padding:60px;font-family:sans-serif">Run <b>python run.py</b> first — '+
-    'site/data.js is missing.</div>'; return;}
+  const D = window.ANALYZER;
+  if(!D){document.body.innerHTML='<div style="padding:60px;font-family:sans-serif">'+
+    'Run <b>python run.py</b> first — site/data.js is missing.</div>';return;}
 
-  const esc = s => String(s==null?'':s).replace(/[&<>]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
-  const pct = v => v==null ? '—' : (v*100).toFixed(1)+'%';
-  const pctS= v => v==null ? '—' : (v>0?'+':'')+(v*100).toFixed(1)+'%';
-  const money = v => {
-    if(v==null||!isFinite(v)) return '—';
-    const a=Math.abs(v);
-    if(a>=1e12) return '$'+(v/1e12).toFixed(1)+'T';
-    if(a>=1e9)  return '$'+(v/1e9).toFixed(1)+'B';
-    if(a>=1e6)  return '$'+(v/1e6).toFixed(0)+'M';
-    return '$'+v.toFixed(0);
+  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+  // Sign goes outside the currency symbol — "-$17.4B", not "$-17.4B".
+  const money=v=>{if(v==null||!isFinite(v))return '—';
+    const a=Math.abs(v), sg=v<0?'-':'';
+    if(a>=1e12)return sg+'$'+(a/1e12).toFixed(2)+'T';
+    if(a>=1e9)return sg+'$'+(a/1e9).toFixed(1)+'B';
+    if(a>=1e6)return sg+'$'+(a/1e6).toFixed(0)+'M';return sg+'$'+a.toFixed(0);};
+  const pct=v=>v==null||!isFinite(v)?'—':(v*100).toFixed(1)+'%';
+  const pctS=v=>v==null||!isFinite(v)?'—':(v>0?'+':'')+(v*100).toFixed(1)+'%';
+  const num=(v,d)=>v==null||!isFinite(v)?'—':v.toFixed(d==null?2:d);
+
+  const AM=D.meta.access_meta, SEC=D.meta.sectors;
+  const byTicker={}; D.companies.forEach(c=>byTicker[c.ticker]=c);
+
+  document.getElementById('lede').textContent=D.meta.subtitle;
+  document.getElementById('lim').innerHTML=D.limitations.map(l=>`<li>${esc(l)}</li>`).join('');
+  document.getElementById('footer').innerHTML=
+    `${D.meta.n_companies} companies · financials and prices rebuilt automatically · `+
+    `US business profiles hand-researched as of ${esc(D.meta.curated_as_of)} · `+
+    `built ${esc(D.meta.generated_at.replace('T',' '))}. Not investment advice.`;
+
+  /* ---------- filters ---------- */
+  let fSec=null, fUs=null, term='';
+  const secWrap=document.getElementById('secFilters'), usWrap=document.getElementById('usFilters');
+  secWrap.innerHTML='<button class="chip on" data-s="">All sectors</button>'+
+    Object.entries(SEC).map(([k,v])=>`<button class="chip" data-s="${k}">${esc(v)}</button>`).join('');
+  usWrap.innerHTML='<button class="chip on" data-u="">Any US status</button>'+
+    ['open','tariffed','restricted','blocked','domestic']
+      .map(k=>`<button class="chip" data-u="${k}">${esc(AM[k].label)}</button>`).join('');
+
+  secWrap.onclick=e=>{if(!e.target.dataset.s&&e.target.dataset.s!=='')return;
+    fSec=e.target.dataset.s||null;
+    [...secWrap.children].forEach(c=>c.classList.toggle('on',c===e.target));render();};
+  usWrap.onclick=e=>{if(e.target.dataset.u===undefined)return;
+    fUs=e.target.dataset.u||null;
+    [...usWrap.children].forEach(c=>c.classList.toggle('on',c===e.target));render();};
+  document.getElementById('q').addEventListener('input',e=>{
+    term=e.target.value.trim().toLowerCase();render();});
+
+  /* ---------- list ---------- */
+  function render(){
+    const list=D.companies.filter(c=>{
+      if(fSec&&c.sector!==fSec)return false;
+      if(fUs&&(!c.us_business||c.us_business.access!==fUs))return false;
+      if(term){
+        const hay=(c.ticker+' '+c.name+' '+c.short_name+' '+(c.adr||'')+' '+
+                   (c.profile.industry||'')+' '+c.tags.join(' ')).toLowerCase();
+        if(!hay.includes(term))return false;
+      }
+      return true;
+    });
+    document.getElementById('count').textContent=
+      `${list.length} of ${D.companies.length} companies`;
+    document.getElementById('empty').style.display=list.length?'none':'block';
+    document.getElementById('grid').innerHTML=list.map(c=>{
+      const a=c.us_business?AM[c.us_business.access]:null;
+      return `<div class="card" data-t="${esc(c.ticker)}">
+        <div class="tk">${esc(c.ticker)}${c.adr?' · '+esc(c.adr):''}</div>
+        <div class="nm">${esc(c.short_name)}</div>
+        <div class="mc">${money(c.profile.market_cap_usd)}</div>
+        ${a?`<span class="badge" style="background:${a.color}1a;color:${a.color}">${esc(a.label)}</span>`:''}
+      </div>`;}).join('');
+  }
+
+  document.getElementById('grid').onclick=e=>{
+    const card=e.target.closest('.card'); if(!card)return;
+    location.hash=card.dataset.t;
   };
-  const num = v => v==null||!isFinite(v) ? '—' : v.toFixed(1);
-
-  document.getElementById('lede').textContent = D.meta.subtitle;
-  document.getElementById('built').textContent =
-    'Built ' + D.meta.generated_at.replace('T',' ') + ' · prices and financials from Yahoo Finance';
-
-  const order = D.meta.sector_order;
-
-  /* ---------- nav ---------- */
-  document.getElementById('nav').innerHTML =
-    '<a href="#top">Scoreboard</a>' +
-    order.map(k=>`<a href="#${k}">${esc(D.sectors[k].label)}</a>`).join('');
-
-  /* ---------- scoreboard ---------- */
-  let wins={cn:0,us:0};
-  const rows = order.map(k=>{
-    const s=D.sectors[k], c=s.cn.index_cagr, u=s.us.index_cagr;
-    let tag='<span class="winner w-tie">Level</span>';
-    if(c!=null&&u!=null){
-      const gap=(c-u)*100;
-      if(gap>1.5){tag='<span class="winner w-cn">China ahead</span>';wins.cn++;}
-      else if(gap<-1.5){tag='<span class="winner w-us">US ahead</span>';wins.us++;}
-    }
-    return `<a class="board-row" href="#${k}">
-        <div class="sec">${esc(s.label)}</div>
-        <div class="pct cn">${pct(c)}</div>
-        <div class="pct us">${pct(u)}</div>
-        <div>${tag}</div></a>`;
-  }).join('');
-
-  document.getElementById('board').innerHTML =
-    `<div class="board-head"><div>Sector</div><div>China</div><div>United States</div>
-     <div>Ten-year winner</div></div>` + rows;
-
-  document.getElementById('takeaway').innerHTML = `<div class="takeaway">
-      <h3>The short version</h3>
-      <p>US baskets out-grew Chinese ones in <b>${wins.us} of ${order.length}</b> sectors,
-      and the gap is widest exactly where it is most talked about — semiconductors and AI.
-      China's one clear win is fintech. Automotive is a genuine dead heat, which is itself
-      remarkable given the US set is anchored by Tesla.</p>
-      <p style="margin-top:12px">The size gap is larger than the growth gap. Across all five
-      sectors the US companies here are worth roughly
-      <b>${(() => {
-        let c=0,u=0; order.forEach(k=>{c+=D.sectors[k].cn.aggregate.market_cap_usd||0;
-                                       u+=D.sectors[k].us.aggregate.market_cap_usd||0;});
-        return (u/c).toFixed(0);
-      })()}×</b> their Chinese counterparts by market value — so this is not a story of a
-      challenger catching up, at least not in the listed markets an outside investor can reach.</p>
-    </div>`;
 
   /* ---------- chart ---------- */
-  function lineChart(cn, us){
-    const W=1000,H=380,L=62,R=18,T=16,B=34;
-    const all=[...cn,...us]; if(!all.length) return '';
-    const ts=d=>Date.parse(d+'T00:00:00Z');
-    const x0=Math.min(...all.map(p=>ts(p.d))), x1=Math.max(...all.map(p=>ts(p.d)));
-    const vmax=Math.max(...all.map(p=>p.v))*1.06, vmin=0;
-    const X=d=>L+(ts(d)-x0)/(x1-x0)*(W-L-R);
-    const Y=v=>T+(1-(v-vmin)/(vmax-vmin))*(H-T-B);
+  function chart(series){
+    if(!series||series.length<2)return '<div style="color:#94a4b4">No price history.</div>';
+    const W=980,H=270,L=54,R=14,T=12,B=26;
+    const vs=series.map(p=>p.v), lo=Math.min(...vs)*0.94, hi=Math.max(...vs)*1.06;
+    const X=i=>L+i/(series.length-1)*(W-L-R);
+    const Y=v=>T+(1-(v-lo)/(hi-lo))*(H-T-B);
     let g='';
-    for(let i=0;i<=4;i++){
-      const v=vmin+(vmax-vmin)*i/4, y=Y(v);
-      g+=`<line x1="${L}" x2="${W-R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}"
-           stroke="#e3e9ef"/><text x="${L-10}" y="${(y+5).toFixed(1)}" fill="#93a3b3"
-           font-size="13" text-anchor="end">${Math.round(v)}</text>`;
-    }
-    let last=null;
-    all.forEach(p=>{const y=p.d.slice(0,4);
-      if(y!==last&&+y%2===0){last=y;
-        g+=`<text x="${X(p.d).toFixed(1)}" y="${H-10}" fill="#93a3b3" font-size="13"
-             text-anchor="middle">${y}</text>`;}
-      if(y!==last) last=y;});
-    const path=(pts,col)=>pts.length?`<path d="${pts.map((p,i)=>(i?'L':'M')+
-      X(p.d).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ')}" fill="none" stroke="${col}"
-      stroke-width="2.4" stroke-linejoin="round" stroke-linecap="round"/>`:'';
-    g+=`<line x1="${L}" x2="${W-R}" y1="${Y(100).toFixed(1)}" y2="${Y(100).toFixed(1)}"
-         stroke="#c3ccd5" stroke-dasharray="3 3"/>`;
-    g+=path(cn,'#c8342b')+path(us,'#1f5fa9');
+    for(let i=0;i<=3;i++){const v=lo+(hi-lo)*i/3,y=Y(v);
+      g+=`<line x1="${L}" x2="${W-R}" y1="${y.toFixed(1)}" y2="${y.toFixed(1)}" stroke="#e4eaf0"/>
+          <text x="${L-9}" y="${(y+4).toFixed(1)}" fill="#94a4b4" font-size="12"
+          text-anchor="end">${v.toFixed(v<10?2:0)}</text>`;}
+    let ly=null;
+    series.forEach((p,i)=>{const y=p.d.slice(0,4);
+      if(y!==ly){ly=y; if(+y%2===0)
+        g+=`<text x="${X(i).toFixed(1)}" y="${H-8}" fill="#94a4b4" font-size="12"
+             text-anchor="middle">${y}</text>`;}});
+    const up=series[series.length-1].v>=series[0].v;
+    g+=`<path d="${series.map((p,i)=>(i?'L':'M')+X(i).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ')}"
+         fill="none" stroke="${up?'#1a7f4b':'#b3392e'}" stroke-width="2.2"
+         stroke-linejoin="round"/>`;
     return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
   }
 
-  /* ---------- company table ---------- */
-  function table(side, rows){
-    const cls = side==='cn'?'cn':'us';
-    const title = side==='cn'?'Chinese companies':'US companies';
-    const body = rows.map(r=>{
-      const growth = r.price_cagr;
-      const gcls = growth==null?'':(growth>=0?'pos':'neg');
-      const young = r.price_years < 9.5
-        ? `<span class="young">listed ${r.listed_from} · ${r.price_years}y only</span>` : '';
-      const rc = r.revenue_cagr;
-      return `<tr>
-        <td class="name">${esc(r.label)}${young}</td>
-        <td>${money(r.market_cap_usd)}</td>
-        <td>${money(r.revenue_usd)}</td>
-        <td class="${gcls}">${pctS(growth)}</td>
-        <td class="${rc==null?'':(rc>=0?'pos':'neg')}">${pctS(rc)}${
-            r.revenue_cagr_years?`<span class="young">${r.revenue_cagr_years}y</span>`:''}</td>
-        <td>${pct(r.profit_margin)}</td>
-        <td>${pct(r.capex_intensity)}</td>
-        <td>${num(r.pe)}</td></tr>`;
-    }).join('');
-    return `<div class="tbl-wrap"><div class="tbl-title ${cls}">${title}</div>
-      <table><tr>
-        <th>Company</th><th>Market cap</th><th>Revenue</th><th>Share price<br>growth p.a.</th>
-        <th>Revenue<br>growth p.a.</th><th>Profit<br>margin</th><th>Capex<br>/ revenue</th><th>P/E</th>
-      </tr>${body}</table></div>`;
+  /* ---------- US exposure panel ---------- */
+  function usPanel(c){
+    const ub=c.us_market_link||{}, ex=c.us_business;
+    const a=ex?AM[ex.access]:null;
+
+    const left = ex ? `
+      <div class="verdict-badge" style="background:${a.color}1a;color:${a.color}">
+        ${esc(a.label)}</div>
+      <div class="chan">${esc(ex.channel)}</div>
+      ${ex.us_revenue_share!=null?`<div class="kv"><span class="kk">Disclosed US revenue share</span>
+        <span class="vv">${pct(ex.us_revenue_share)}</span></div>`:
+        `<div class="kv"><span class="kk">US revenue share</span>
+         <span class="vv" style="color:#94a4b4">Not disclosed</span></div>`}
+      ${ex.policy&&ex.policy.length?`<ul class="pol">${
+        ex.policy.map(p=>`<li>${esc(p)}</li>`).join('')}</ul>`:''}
+      ${ex.note?`<div class="curnote">${esc(ex.note)}</div>`:''}
+      <div class="conf">Hand-researched · confidence: ${esc(ex.confidence)} ·
+        as of ${esc(D.meta.curated_as_of)}</div>`
+      : '<div style="color:#94a4b4">No curated US profile for this company yet.</div>';
+
+    const b=ub.beta;
+    const bl=b==null?'':(b>=1.1?'Moves more than the US market':
+              b>=0.7?'Moves closely with the US market':
+              b>=0.35?'Moves loosely with the US market':'Largely detached from the US market');
+    const right = `
+      <div class="verdict-badge" style="background:var(--blue-soft);color:var(--blue)">
+        ${esc(bl||'Not enough history')}</div>
+      <div class="kv"><span class="kk">Beta to S&amp;P 500</span>
+        <span class="vv">${num(b)}</span></div>
+      <div class="kv"><span class="kk">Correlation</span>
+        <span class="vv">${num(ub.correlation)}</span></div>
+      <div class="kv"><span class="kk">Variance explained</span>
+        <span class="vv">${ub.r_squared==null?'—':pct(ub.r_squared)}</span></div>
+      <div class="barwrap"><span style="width:${
+        Math.min(100,Math.max(2,(ub.r_squared||0)*100)).toFixed(0)}%"></span></div>
+      <div class="conf">Weekly returns, last 5 years${
+        ub.n_weeks?` · ${ub.n_weeks} weeks`:''} · recomputed every build</div>
+      ${c.adr?`<div class="curnote">Also trades in the US as
+        <b>${esc(c.adr)}</b> — a listing, which is not the same as US revenue.</div>`:''}`;
+
+    return `<div class="us">
+      <div class="us-head">
+        <div class="t">United States exposure</div>
+        <div class="s">Two different questions — what it sells there, and how it trades with there</div>
+      </div>
+      <div class="us-body">
+        <div class="us-col"><h4>How it sells in the US</h4>
+          <div class="how">Hand-researched business and policy status</div>${left}</div>
+        <div class="us-col"><h4>How it trades with the US</h4>
+          <div class="how">Computed from market data</div>${right}</div>
+      </div></div>`;
   }
 
-  /* ---------- sections ---------- */
-  document.getElementById('sectors').innerHTML = order.map(k=>{
-    const s=D.sectors[k], cn=s.cn, us=s.us;
-    const stat=(label,cv,uv,fn)=>`<div class="stat"><div class="k">${label}</div>
-      <div class="pair"><span class="v cn">${fn(cv)}</span><span class="v us">${fn(uv)}</span></div></div>`;
+  /* ---------- detail ---------- */
+  function showDetail(t){
+    const c=byTicker[t]; if(!c){location.hash='';return;}
+    const p=c.profile, ps=c.price||{};
+    const rows=[['1 year','1y'],['3 years','3y'],['5 years','5y'],['10 years','10y']]
+      .map(([lbl,k])=>{
+        const r=ps['return_'+k], g=ps['cagr_'+k];
+        if(r==null)return '';
+        return `<tr><td>${lbl}</td>
+          <td class="${r>=0?'pos':'neg'}">${pctS(r)}</td>
+          <td class="${g==null?'':(g>=0?'pos':'neg')}">${g==null?'—':pctS(g)}</td></tr>`;
+      }).join('');
 
-    return `<section class="sector" id="${k}">
-      <h2>${esc(s.label)}</h2>
-      <p class="sector-blurb">${esc(s.blurb)}</p>
+    const m=(k,v,cls)=>`<div class="m"><div class="k">${k}</div>
+      <div class="v ${cls||''}">${v}</div></div>`;
 
-      <div class="versus">
-        <div class="vcard cn"><div class="who">China</div>
-          <div class="big">${pct(cn.index_cagr)}</div>
-          <div class="cap">per year over ${cn.index_years} years ·
-            ${pctS(cn.index_total_return)} total</div></div>
-        <div class="vcard us"><div class="who">United States</div>
-          <div class="big">${pct(us.index_cagr)}</div>
-          <div class="cap">per year over ${us.index_years} years ·
-            ${pctS(us.index_total_return)} total</div></div>
+    document.getElementById('detail').innerHTML=`
+      <button class="back" id="back">← All companies</button>
+      <div class="dhead">
+        <h1>${esc(c.short_name)}</h1>
+        <div class="dmeta"><b>${esc(c.ticker)}</b>${c.adr?` · US listing <b>${esc(c.adr)}</b>`:''}
+          · ${esc(SEC[c.sector]||c.sector)}${p.industry?` · ${esc(p.industry)}`:''}
+          ${p.employees?` · ${p.employees.toLocaleString()} employees`:''}</div>
+        ${p.summary?`<p class="summary">${esc(p.summary)}</p>`:''}
       </div>
 
-      <div class="chartbox">
-        <div class="legend">
-          <span style="color:#c8342b"><i style="background:#c8342b"></i>China</span>
-          <span style="color:#1f5fa9"><i style="background:#1f5fa9"></i>United States</span>
-        </div>
-        ${lineChart(cn.index, us.index)}
-        <div class="cap-note">Equal-weight basket, both rebased to 100 at the start of the
-          window. A value of 400 means the basket quadrupled.</div>
+      ${c.verdict&&c.verdict.length?`<div class="verdict"><ul>${
+        c.verdict.map(v=>`<li>${esc(v)}</li>`).join('')}</ul></div>`:''}
+
+      <div class="metrics">
+        ${m('Market cap',money(p.market_cap_usd))}
+        ${m('Revenue',money(p.revenue_usd))}
+        ${m('Revenue growth',pctS(p.revenue_growth_yoy),
+             p.revenue_growth_yoy==null?'':(p.revenue_growth_yoy>=0?'pos':'neg'))}
+        ${m('Net margin',pct(p.profit_margin),
+             p.profit_margin==null?'':(p.profit_margin>=0?'pos':'neg'))}
+        ${m('Gross margin',pct(p.gross_margin))}
+        ${m('P/E',num(p.pe,1))}
+        ${m('Price / book',num(p.price_to_book,1))}
+        ${m('Capex / revenue',pct(p.capex_intensity))}
       </div>
 
-      <div class="stats">
-        ${stat('Combined market cap', cn.aggregate.market_cap_usd, us.aggregate.market_cap_usd, money)}
-        ${stat('Combined revenue', cn.aggregate.revenue_usd, us.aggregate.revenue_usd, money)}
-        ${stat('Capex / revenue', cn.aggregate.capex_intensity, us.aggregate.capex_intensity, pct)}
-        ${stat('Median profit margin', cn.aggregate.median_profit_margin, us.aggregate.median_profit_margin, pct)}
-        ${stat('Median P/E', cn.aggregate.median_pe, us.aggregate.median_pe, num)}
-        ${stat('Full 10y history', cn.aggregate.n_full_history/cn.aggregate.n,
-                us.aggregate.n_full_history/us.aggregate.n, v=>Math.round(v*100)+'%')}
-      </div>
+      ${usPanel(c)}
 
-      ${s.note?`<div class="note"><b>Worth knowing:</b> ${esc(s.note)}</div>`:''}
+      <div class="box"><h3>Share price · ${ps.years||'—'} years</h3>
+        ${chart(D.series[c.ticker])}</div>
 
-      <div class="tables">${table('cn',cn.companies)}${table('us',us.companies)}</div>
-    </section>`;
-  }).join('');
+      <div class="box"><h3>Returns</h3>
+        <table><tr><th>Period</th><th>Total return</th><th>Per year</th></tr>
+        ${rows||'<tr><td colspan="3">No history</td></tr>'}</table></div>
 
-  document.getElementById('lim').innerHTML =
-    D.limitations.map(l=>`<li>${esc(l)}</li>`).join('');
+      <div class="box"><h3>Risk &amp; quality</h3>
+        <div class="metrics" style="margin:0;border:none">
+          ${m('Volatility',pct(ps.volatility))}
+          ${m('Max drawdown',pct(ps.max_drawdown),'neg')}
+          ${m('% of 52w high',pct(ps.pct_of_52w_high))}
+          ${m('Return on equity',pct(p.roe))}
+          ${m('Free cash flow',money(p.free_cashflow_usd))}
+          ${m('Revenue CAGR',pctS(p.revenue_cagr)+(p.revenue_cagr_years?
+              ` <span style="font-size:12px;color:#94a4b4">${p.revenue_cagr_years}y</span>`:''))}
+        </div></div>`;
 
-  const fx=D.meta.fx||{};
-  document.getElementById('footer').innerHTML =
-    `Every figure is converted to US dollars at spot (CNY ${(fx.CNY||0).toFixed(4)}, `+
-    `HKD ${(fx.HKD||0).toFixed(4)}, EUR ${(fx.EUR||0).toFixed(4)}). `+
-    `Rebuilt automatically each weekday. Not investment advice.`;
+    document.getElementById('listview').style.display='none';
+    document.getElementById('detail').style.display='block';
+    document.getElementById('back').onclick=()=>{location.hash='';};
+    window.scrollTo(0,0);
+  }
+
+  function route(){
+    const t=decodeURIComponent(location.hash.slice(1));
+    if(t&&byTicker[t]) showDetail(t);
+    else{
+      document.getElementById('detail').style.display='none';
+      document.getElementById('listview').style.display='block';
+    }
+  }
+  window.addEventListener('hashchange',route);
+
+  // Enter on a single match jumps straight to it.
+  document.getElementById('q').addEventListener('keydown',e=>{
+    if(e.key!=='Enter')return;
+    const cards=document.querySelectorAll('#grid .card');
+    if(cards.length>=1) location.hash=cards[0].dataset.t;
+  });
+
+  render(); route();
 })();
 </script>
 </body>

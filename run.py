@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
-"""China vs US — build the comparison engine.
+"""China Company Analyzer — build.
 
     python run.py            # use cache where fresh
-    python run.py --force    # re-fetch everything (slow: ~100 API calls)
+    python run.py --force    # re-fetch everything (~60 API calls, ~90s)
 
-Writes data/artifacts/versus.json and site/data.js, then open site/index.html.
+Writes data/artifacts/analyzer.json and site/data.js, then open site/index.html.
 
-The regime engine is still here and still runs — see run_regime.py.
+Earlier builds are still here: run_versus.py (China vs US sector comparison)
+and run_regime.py (regime classifier).
 """
 
 from __future__ import annotations
@@ -15,63 +16,58 @@ import argparse
 import sys
 import time
 
-from versus import export, ingest, metrics
-from versus.sectors import SECTORS, all_tickers
-
-
-def _fmt_b(v):
-    """USD into a readable scale."""
-    if not v:
-        return "—"
-    for div, suf in ((1e12, "T"), (1e9, "B"), (1e6, "M")):
-        if abs(v) >= div:
-            return f"${v / div:,.1f}{suf}"
-    return f"${v:,.0f}"
+from analyzer import analyze, export, ingest
+from analyzer.universe import BENCHMARK, UNIVERSE, US_EXPOSURE, tickers
 
 
 def main() -> int:
     ap = argparse.ArgumentParser()
-    ap.add_argument("--force", action="store_true", help="ignore cache, re-fetch")
+    ap.add_argument("--force", action="store_true")
     args = ap.parse_args()
 
     t0 = time.time()
-    print("China vs US — build\n" + "=" * 64)
+    print("China Company Analyzer — build\n" + "=" * 60)
 
-    tickers = all_tickers()
-    print(f"[1/4] ingest — {len(tickers)} tickers across {len(SECTORS)} sectors")
-
+    ts = tickers()
+    print(f"[1/4] ingest — {len(ts)} companies")
     fx = ingest.fetch_fx(force=args.force)
-    print(f"      FX     CNY={fx.get('CNY', 0):.4f}  HKD={fx.get('HKD', 0):.4f}  "
-          f"EUR={fx.get('EUR', 0):.4f}")
+    print(f"      FX     CNY={fx.get('CNY', 0):.4f}  HKD={fx.get('HKD', 0):.4f}")
 
-    prices = ingest.fetch_prices(tickers, force=args.force)
-    print(f"      prices {prices.shape[1]} resolved, {len(prices)} days "
-          f"from {prices.index[0].date()}")
+    prices = ingest.fetch_prices(ts, BENCHMARK, force=args.force)
+    print(f"      prices {prices.shape[1]} series, {len(prices)} days")
 
-    print("      fundamentals — one call per ticker, please wait…")
-    fund = ingest.fetch_fundamentals(tickers, fx, force=args.force)
-    print(f"      fundamentals {len(fund)}/{len(tickers)}")
+    print("      profiles — one call per company, please wait…")
+    profiles = ingest.fetch_profiles(ts, fx, force=args.force)
+    print(f"      profiles {len(profiles)}/{len(ts)}")
 
-    print("[2/4] metrics")
-    sectors = metrics.build(prices, fund)
-    for key, s in sectors.items():
-        cn, us = s["cn"], s["us"]
-        cn_c = cn["index_cagr"]
-        us_c = us["index_cagr"]
-        print(f"      {s['label']:<32} "
-              f"CN {(cn_c * 100 if cn_c else 0):>6.1f}%/yr   "
-              f"US {(us_c * 100 if us_c else 0):>6.1f}%/yr")
+    print("[2/4] analyze")
+    companies = analyze.build(prices, profiles, UNIVERSE, BENCHMARK)
+    covered = sum(1 for c in companies if c["us_business"])
+    with_beta = sum(1 for c in companies if c["us_market_link"].get("beta") is not None)
+    print(f"      {len(companies)} analysed")
+    print(f"      US business profile: {covered}/{len(companies)} curated")
+    print(f"      US-market beta:      {with_beta}/{len(companies)} computed")
 
     print("[3/4] export")
-    payload = export.build_payload(sectors, fx, ingest.LINEAGE)
+    payload = export.build_payload(companies, prices, ingest.LINEAGE)
     export.write(payload)
 
     print("[4/4] done")
-    print("=" * 64)
-    for key, s in sectors.items():
-        cn_m = s["cn"]["aggregate"]["market_cap_usd"]
-        us_m = s["us"]["aggregate"]["market_cap_usd"]
-        print(f"{s['label']:<32} mcap  CN {_fmt_b(cn_m):>9}   US {_fmt_b(us_m):>9}")
+    print("=" * 60)
+
+    buckets: dict[str, int] = {}
+    for c in companies:
+        if c["us_business"]:
+            k = c["us_business"]["access"]
+            buckets[k] = buckets.get(k, 0) + 1
+    print("US access breakdown:")
+    for k in ("open", "tariffed", "restricted", "blocked", "domestic"):
+        if k in buckets:
+            print(f"  {k:<11} {buckets[k]:>3}")
+
+    missing = [c.ticker for c in UNIVERSE if c.ticker not in US_EXPOSURE]
+    if missing:
+        print(f"\nNo curated US profile yet: {', '.join(missing)}")
 
     print(f"\nBuilt in {time.time() - t0:.1f}s. Open site/index.html")
     return 0
