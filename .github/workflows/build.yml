@@ -40,6 +40,19 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      # Company profiles come from a rate-limited endpoint that will not serve
+      # the whole board in one run, so each build takes a slice and the cache
+      # carries what has already been collected. Without this the nightly job
+      # would restart from zero every night and coverage would never grow.
+      # The key rotates daily; restore-keys pull the most recent previous cache.
+      - name: Restore data cache
+        uses: actions/cache@v4
+        with:
+          path: data/hkcache
+          key: hkcache-${{ github.run_id }}
+          restore-keys: |
+            hkcache-
+
       # The interesting one. This runner is not behind the WatchGuard firewall
       # that geo-blocks China-hosted IPs on the local network, so the A-share
       # sources may work here even though they fail on the laptop. Allowed to

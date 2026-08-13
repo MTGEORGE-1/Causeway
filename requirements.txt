@@ -1,6 +1,7 @@
 # Transmission — China Tech Model Engine
 # Verified working on Python 3.14.4 / macOS, 2026-08-04.
 pandas>=2.2
+openpyxl>=3.1        # reads HKEX ListOfSecurities.xlsx
 numpy>=1.26
 requests>=2.31
 akshare>=1.18.81      # macro + index history (A-share equity endpoints are geo-blocked here)

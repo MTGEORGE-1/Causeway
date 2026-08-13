@@ -1,93 +1,106 @@
-# China Company Analyzer
+# HKEX Explorer
 
-Type a ticker — `BYD`, `0981.HK`, `Tencent` — and get an analysis of what that company does,
-how it is performing, and **how exposed it is to the United States**.
+Look up any company on the Hong Kong Stock Exchange and get three things:
 
-61 major Chinese listed companies across six sectors.
+1. **A five-year price chart with the notable points marked** — peak, trough, worst drawdown,
+   biggest single sessions, strongest run.
+2. **Which market actually moves it** — the US, Hong Kong, or mainland China — and specifically
+   the difference between mainland and Hong Kong.
+3. **Who runs it** — CEO, CFO and the rest of the named leadership.
+
+Built from HKEX's own *List of Securities*: **2,716 companies** across the Main Board, GEM,
+REITs and investment companies.
 
 ```bash
 python3 -m venv .venv
 .venv/bin/pip install -r requirements.txt
-.venv/bin/python run.py          # --force to re-fetch (~70s)
-open site/index.html
+.venv/bin/python run.py
+.venv/bin/python serve.py     # opens the site
 ```
 
-Live: **https://mtgeorge-1.github.io/transmission/** — rebuilt automatically each weekday.
+`serve.py` is needed locally because the page loads one file per company and browsers block
+that on `file://` URLs. On GitHub Pages it is served over HTTP and just works.
 
 ---
 
-## The US exposure panel
+## Which market moves this stock
 
-This is the part that does not exist elsewhere. It answers **two different questions side by
-side**, and refuses to blend them into a single score — because the interesting cases are
-exactly the ones where they disagree.
+The reason the tool exists. Every company here trades in Hong Kong, which tells you almost
+nothing about what actually drives it. Three regressions of weekly returns answer it:
 
-| | **How it sells in the US** | **How it trades with the US** |
+| | Benchmark | What it captures |
 |---|---|---|
-| Source | Hand-researched, dated, confidence-rated | Computed from market data every build |
-| Shows | Sales channel, regulatory status, tariffs, disclosed US revenue share | Beta and correlation to the S&P 500 |
+| **United States** | S&P 500 | Global risk appetite, the dollar cycle |
+| **Hong Kong** | Hang Seng | Local liquidity, the flows that clear the trade |
+| **Mainland China** | CSI 300 | Beijing's policy cycle, domestic sentiment |
 
-Companies are rated on US market access:
+Across the board: **942 move with Hong Kong, 178 with the mainland, 15 with the US**, and
+1,581 have no clear driver at all — mostly small and thinly traded, which is itself the finding.
 
-**Sells openly** · **Sells, exposed to tariffs** · **Restricted by US policy** ·
-**Effectively blocked** · **Little or no US business**
+Tencent is the clean illustration: beta 1.34 to Hong Kong and 1.19 to the mainland, but Hong
+Kong explains 69% of its weekly moves against the mainland's 28%. It is a Chinese company whose
+share price is set by Hong Kong and global money.
 
-Worked examples:
+Weekly rather than daily returns throughout: Hong Kong closes before New York opens and the
+mainland runs a different holiday calendar, so daily co-movement understates these
+relationships for purely mechanical reasons.
 
-- **BYD** — *effectively blocked* (buses only, 100% tariff on Chinese EVs), yet beta 0.44. It
-  trades partly on US sentiment while selling no cars there.
-- **NIO** — US-listed, US R&D office, **zero** US revenue. A listing is not a market.
-- **Yum China** — US-listed, operates KFC inside China, zero US revenue. The mirror image.
-- **Techtronic** — Hong Kong-listed, but owns Milwaukee Tool and Ryobi and sells through Home
-  Depot. Beta 1.00. Real US linkage on both counts.
-- **SMIC** — restricted, but the binding constraint is what it can *buy* (lithography under
-  export controls), not what it can sell.
-- **PDD/Temu** — the most tariff-sensitive name here; its US model was built on the $800 de
-  minimis exemption that no longer exists.
+## Chart annotations are detected, not written
 
-Current split: 15 open · 4 tariffed · 6 restricted · 8 blocked · 28 domestic.
+Hand-authoring notes for 2,716 companies is not possible, and doing it for the famous twenty
+would leave everything else blank. So the chart marks what is structurally notable in the
+series — five-year high and low, deepest drawdown, biggest one-day moves, strongest
+three-month run — and describes each one.
 
-## What each company page shows
+**They describe the move, never its cause.** A −13% day is labelled a −13% day, not a profit
+warning. Inferring reasons from price alone is how you end up confidently wrong.
 
-- What it does — business description, sector, industry, headcount
-- A plain-language verdict generated from thresholds, so identical evidence always reads the same
-- Market cap, revenue, growth, margins, P/E, price/book, capex intensity
-- Ten-year share price chart
-- Returns over 1 / 3 / 5 / 10 years, total and annualised
-- Risk and quality — volatility, max drawdown, % of 52-week high, ROE, free cash flow
+## Known limits — read this one
 
-## Honest limits
+**Company profiles cover 665 of 2,716 companies, and that number grows every build.**
 
-- **The US business data is hand-curated as of 2026-05** and does not update nightly. Financials
-  and prices do. The page keeps the two visually separate and stamps the curated date, because a
-  stale regulatory status is worse than none if you cannot tell which is which.
-- **US revenue share is blank unless disclosed.** Blank means not disclosed, not zero.
-- **Beta is sentiment linkage, not revenue.** Weekly returns are used because Hong Kong closes
-  before New York opens; daily co-movement would understate the relationship mechanically.
-- **A-share-only companies are missing** — geo-blocked from this network. That costs Cambricon,
-  Hygon, NAURA, AMEC and iFlytek. See [PHASE0_FINDINGS.md](PHASE0_FINDINGS.md).
-- All money is converted to USD at spot. yfinance reports market cap in listing currency and
-  financials in `financialCurrency` and the two disagree constantly — SMIC lists in Hong Kong but
-  reports USD, BYD reports CNY. Unconverted that is a 7× error.
+Business descriptions, sector, financials and the C-suite come from Yahoo's quote endpoint,
+which rate-limits by IP and will not serve 2,782 companies in a single run — asking for all of
+them returned 401s for three quarters of the board, and retrying inside the same run recovered
+nothing. So each build takes a slice of about 450, largest and best-known companies first, and
+the cache accumulates across runs. The nightly job restores that cache, so coverage fills in
+over roughly a week and then keeps refreshing.
+
+**Price history, chart annotations and the three-market comparison are unaffected** — they use
+a different endpoint that covers the whole board in one pass. 2,716 companies have charts;
+2,624 have the full three-market analysis. The list view shows how many carry a full profile,
+and has a filter for them.
+
+Other limits:
+
+- Market relationships are statistical, not causal. A high mainland beta says the shares move
+  with Shanghai; it does not prove where the revenue comes from.
+- Leadership data can lag real appointments. Treat it as a starting point, not a filing.
+- Coverage thins toward the small end. Many GEM names barely trade; 66 were dropped for having
+  under 60 days of history.
+- Money is converted to USD at spot.
 - Nothing here is a forecast or investment advice.
 
 ## Layout
 
 ```
-analyzer/
-  universe.py   61 companies + curated US_EXPOSURE table
-  ingest.py     prices, profiles, financials, S&P 500; USD-normalised, cached
-  analyze.py    metrics, US-market beta, plain-language verdict
-  export.py     JSON artifact + site/data.js
-run.py          orchestrator
-site/index.html the lookup page
+hkex/
+  securities.py  parse ListOfSecurities.xlsx -> 2,782 equities
+  ingest.py      batched prices, 3 benchmarks, budgeted profile fetch
+  events.py      notable-point detection
+  markets.py     three-market regressions + the mainland-vs-HK gap
+  analyze.py     assemble the per-company record
+  export.py      search index + one JSON per company
+run.py           orchestrator
+serve.py         local preview server
+site/            the page
 ```
 
 Deploy: [DEPLOY.md](DEPLOY.md). Every push to `main` rebuilds and redeploys.
 
 ## Earlier builds, still working
 
+- `run_analyzer.py` + `analyzer/` — 61 Chinese companies with hand-researched US-exposure
 - `run_versus.py` + `versus/` — China vs US sector comparison across 90 companies
-- `run_regime.py` + `transmission/` — 4-state hidden Markov regime classifier. It identified the
-  June 2015 bubble-to-crash handoff without being given the dates. Original plan in
-  [SCOPING.md](SCOPING.md).
+- `run_regime.py` + `transmission/` — hidden Markov regime classifier; it found the June 2015
+  bubble-to-crash handoff without being given the dates. Plan in [SCOPING.md](SCOPING.md).
