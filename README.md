@@ -1,6 +1,6 @@
-# HKEX Explorer
+# Crosscurrent
 
-Look up any company on the Hong Kong Stock Exchange and get three things:
+A deep dive into the Hong Kong Stock Exchange. Look up any listed company and get three things:
 
 1. **A five-year price chart with the notable points marked** — peak, trough, worst drawdown,
    biggest single sessions, strongest run.
@@ -57,7 +57,7 @@ warning. Inferring reasons from price alone is how you end up confidently wrong.
 
 ## Known limits — read this one
 
-**Company profiles cover 665 of 2,716 companies, and that number grows every build.**
+**Company profiles cover 1,104 of 2,716 companies, and that number grows every build.**
 
 Business descriptions, sector, financials and the C-suite come from Yahoo's quote endpoint,
 which rate-limits by IP and will not serve 2,782 companies in a single run — asking for all of

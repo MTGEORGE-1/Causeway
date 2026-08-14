@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>HKEX Explorer</title>
+<title>Crosscurrent</title>
 <style>
   :root{
     --bg:#fff; --ink:#16232f; --body:#3d4f61; --soft:#6b7f92; --faint:#95a5b5;
@@ -23,10 +23,25 @@
   h3{font-size:13.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--faint);
      font-weight:600;margin-bottom:12px}
 
-  header{padding:46px 0 20px}
-  .kicker{color:var(--cn);font-weight:600;font-size:13px;letter-spacing:.14em;
-    text-transform:uppercase;margin-bottom:12px}
-  .lede{font-size:18px;color:var(--soft);max-width:60ch;margin:12px 0 0}
+  header{padding:52px 0 18px}
+  .brand{font-size:46px;letter-spacing:-.025em}
+  .lede{font-size:19px;color:var(--soft);max-width:60ch;margin:8px 0 0}
+
+  /* quote line in the list */
+  .row .px{text-align:right;font-variant-numeric:tabular-nums;font-weight:600;
+    color:var(--ink);font-size:15px}
+  .row .chg{text-align:right;font-variant-numeric:tabular-nums;font-size:14px}
+  .asof{color:var(--faint);font-size:12.5px;margin-left:6px}
+
+  /* detail: the read sits directly under the name */
+  .dread{font-size:16.5px;color:var(--body);max-width:74ch;margin:10px 0 0}
+  .about{border:1px solid var(--rule);border-radius:10px;padding:18px 20px;
+    margin-bottom:22px}
+  .about p{margin:0;font-size:14.5px;line-height:1.62;color:var(--body)}
+  .quotebar{display:flex;align-items:baseline;gap:12px;margin-top:12px;flex-wrap:wrap}
+  .quotebar .big{font-size:32px;font-weight:600;color:var(--ink);
+    font-variant-numeric:tabular-nums}
+  .quotebar .mv{font-size:17px;font-weight:600;font-variant-numeric:tabular-nums}
 
   .searchbar{position:relative;margin:26px 0 14px}
   #q{width:100%;padding:16px 18px 16px 48px;font-size:18px;font-family:var(--sans);
@@ -150,15 +165,14 @@
 
   <div id="listview">
     <header>
-      <div class="kicker">Hong Kong Stock Exchange</div>
-      <h1>HKEX Explorer</h1>
-      <p class="lede" id="lede"></p>
+      <h1 class="brand">Crosscurrent</h1>
+      <p class="lede">A deep dive into the Hong Kong Stock Exchange.</p>
     </header>
 
     <div class="searchbar">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       <input id="q" type="text" autocomplete="off" spellcheck="false"
-             placeholder="Search 2,700+ listings — 0700, Tencent, HSBC, 1211.HK…">
+             placeholder="Search the whole exchange — 0700, Tencent, HSBC, 1211…">
     </div>
     <div class="filters" id="boardF"></div>
     <div class="filters" id="drivF"></div>
@@ -191,8 +205,9 @@
   const num=(v,d)=>v==null||!isFinite(v)?'—':v.toFixed(d==null?2:d);
   const MK={us:{n:'United States',c:'var(--us)'},hk:{n:'Hong Kong',c:'var(--hk)'},
             cn:{n:'Mainland China',c:'var(--cn)'}};
+  const EVCOL={high:'#137a4d',low:'#b3392e',drawdown:'#b3392e',spike:'#137a4d',
+               drop:'#b3392e',rally:'#1f5fa9'};
 
-  document.getElementById('lede').textContent=D.meta.subtitle;
   document.getElementById('lim').innerHTML=D.limitations.map(l=>`<li>${esc(l)}</li>`).join('');
   document.getElementById('footer').innerHTML=
     `${D.meta.n_companies.toLocaleString()} companies from HKEX's List of Securities `+
@@ -247,13 +262,16 @@
     const slice=list.slice(0,shown);
     document.getElementById('rows').innerHTML=slice.map(r=>{
       const d=r.driver||'none';
-      const rc=r.r1y==null?'':(r.r1y>=0?'up':'dn');
+      const cc=r.chgp==null?'':(r.chgp>=0?'up':'dn');
+      const px=r.px==null?'—':`${(r.cur||'HKD')==='HKD'?'HK$':''}${r.px.toFixed(2)}`;
+      const mv=r.chgp==null?'':
+        `${r.chg>=0?'+':''}${r.chg.toFixed(2)} (${(r.chgp*100).toFixed(2)}%)`;
       return `<div class="row" data-c="${esc(r.code)}">
         <div class="code">${esc(r.code)}</div>
         <div><div class="nm">${esc(r.name)}</div>
           <div class="sub">${esc(r.sector||r.board)}</div></div>
-        <div class="num hide">${money(r.mcap)}</div>
-        <div class="num ${rc}">${pctS(r.r1y)}</div>
+        <div class="px">${px}</div>
+        <div class="chg ${cc}">${mv}</div>
         <div><span class="tagm t-${d}">${d==='none'?'—':esc(MK[d].n)}</span></div>
       </div>`;}).join('');
     document.getElementById('more').style.display=list.length>shown?'block':'none';
@@ -286,18 +304,16 @@
     g+=`<path d="${series.map((p,i)=>(i?'L':'M')+X(p.d).toFixed(1)+' '+Y(p.v).toFixed(1)).join(' ')}"
       fill="none" stroke="${up?'#137a4d':'#b3392e'}" stroke-width="2" stroke-linejoin="round"/>`;
 
-    const COL={high:'#137a4d',low:'#b3392e',drawdown:'#b3392e',
-               spike:'#137a4d',drop:'#b3392e',rally:'#1f5fa9'};
+    // Markers only. Text labels on the plot collided with the line and each
+    // other; the numbered list underneath carries the explanation instead.
     (events||[]).forEach((e,i)=>{
-      const x=Math.max(L,Math.min(W-R,X(e.date))), y=Y(e.price), c=COL[e.kind]||'#6b7f92';
-      const above=i%2===0, ly2=above?Math.max(14,y-20):Math.min(H-B-6,y+24);
-      const anchor=x<110?'start':(x>W-130?'end':'middle');
-      g+=`<line x1="${x.toFixed(1)}" y1="${y.toFixed(1)}" x2="${x.toFixed(1)}"
-           y2="${ly2.toFixed(1)}" stroke="${c}" stroke-width="1" stroke-dasharray="2 2" opacity=".7"/>
-          <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4" fill="#fff"
-           stroke="${c}" stroke-width="2"/>
-          <text x="${x.toFixed(1)}" y="${(above?ly2-4:ly2).toFixed(1)}" fill="${c}"
-           font-size="12" font-weight="600" text-anchor="${anchor}">${esc(e.label)}</text>`;
+      const x=Math.max(L,Math.min(W-R,X(e.date))), y=Y(e.price), c=EVCOL[e.kind]||'#6b7f92';
+      g+=`<circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="6.5" fill="${c}"
+           opacity=".16"/>
+          <circle cx="${x.toFixed(1)}" cy="${y.toFixed(1)}" r="4.5" fill="#fff"
+           stroke="${c}" stroke-width="2.2"/>
+          <text x="${x.toFixed(1)}" y="${(y+3.2).toFixed(1)}" fill="${c}"
+           font-size="8" font-weight="700" text-anchor="middle">${i+1}</text>`;
     });
     return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="xMidYMid meet">${g}</svg>`;
   }
@@ -359,21 +375,26 @@
       return `<tr><td>${l}</td><td class="${r>=0?'up':'dn'}">${pctS(r)}</td>
         <td class="${g==null?'':(g>=0?'up':'dn')}">${g==null?'—':pctS(g)}</td></tr>`;}).join('');
 
-    const COL={high:'#137a4d',low:'#b3392e',drawdown:'#b3392e',spike:'#137a4d',
-               drop:'#b3392e',rally:'#1f5fa9'};
+    const q=c.quote||{};
+    const cur=(q.currency||'HKD')==='HKD'?'HK$':'';
+    const qcls=q.change_pct==null?'':(q.change_pct>=0?'up':'dn');
 
     el.innerHTML=`
       <button class="back" id="back">← All companies</button>
       <div class="dhead">
         <h1>${esc(c.name)}</h1>
+        ${c.read&&c.read.length?`<p class="dread">${
+          c.read.map(esc).join(' ')}</p>`:''}
+        <div class="quotebar">
+          <span class="big">${q.price==null?'—':cur+q.price.toFixed(2)}</span>
+          <span class="mv ${qcls}">${q.change_pct==null?'':
+            `${q.change>=0?'+':''}${q.change.toFixed(2)} (${(q.change_pct*100).toFixed(2)}%)`}</span>
+          <span class="asof">at close ${esc(q.as_of||'—')}</span>
+        </div>
         <div class="dmeta"><b>${esc(c.code)}</b> · ${esc(c.ticker)} · ${esc(c.board)}
-          ${p.sector?` · ${esc(p.sector)}`:''}${p.industry?` · ${esc(p.industry)}`:''}
-          ${p.employees?` · ${p.employees.toLocaleString()} employees`:''}</div>
-        ${p.summary?`<p class="summary">${esc(p.summary)}</p>`:''}
+          ${p.employees?` · ${p.employees.toLocaleString()} employees`:''}
+          ${p.sector?` · ${esc(p.sector)}`:''}${p.industry?` · ${esc(p.industry)}`:''}</div>
       </div>
-
-      ${c.read&&c.read.length?`<div class="read"><ul>${
-        c.read.map(x=>`<li>${esc(x)}</li>`).join('')}</ul></div>`:''}
 
       <div class="metrics">
         ${m('Market cap',money(p.market_cap_usd))}
@@ -386,15 +407,20 @@
         ${m('Volatility',pct(ps.volatility))}
       </div>
 
-      <div class="box"><h3>Share price · ${ps.years||'—'} years, with notable points</h3>
+      <div class="box"><h3>Share price · last five years</h3>
         ${chart(c.series,c.events)}
-        ${c.events&&c.events.length?`<div class="evlist">${c.events.map(e=>
-          `<div class="ev"><span class="dot" style="background:${COL[e.kind]||'#6b7f92'}"></span>
+        ${c.events&&c.events.length?`<div class="evlist">${c.events.map((e,i)=>
+          `<div class="ev"><span class="dot" style="background:${EVCOL[e.kind]||'#6b7f92'}"></span>
             <span class="d">${esc(e.date)}</span>
-            <span>${esc(e.detail)}</span></div>`).join('')}</div>`:''}
+            <span><b style="color:var(--ink)">${esc(e.title)}</b> — ${esc(e.detail)}
+            ${e.context?` <span style="color:var(--soft)">${esc(e.context)}</span>`:''}</span>
+          </div>`).join('')}</div>`:''}
       </div>
 
       ${marketsPanel(c.markets)}
+
+      ${p.summary?`<div class="about"><h3>About the company</h3>
+        <p>${esc(p.summary)}</p></div>`:''}
 
       <div class="box"><h3>Leadership</h3>
         ${off.length?`<div class="people">${off.map(o=>`<div class="p">

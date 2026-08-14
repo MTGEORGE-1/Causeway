@@ -78,10 +78,32 @@ def _summary_lines(prof: dict, ps: dict, mk: dict) -> list[str]:
     return out
 
 
+def quote(s: pd.Series, currency: str = "HKD") -> dict:
+    """Latest close and the move on that session.
+
+    This is the number a reader recognises from a search engine — price, and
+    what it did today. It is as fresh as the last build, which the page states
+    rather than implying a live tick.
+    """
+    s = s.dropna()
+    if len(s) < 2:
+        return {}
+    last, prev = float(s.iloc[-1]), float(s.iloc[-2])
+    return {
+        "price": last,
+        "prev_close": prev,
+        "change": last - prev,
+        "change_pct": (last / prev - 1) if prev else None,
+        "as_of": str(s.index[-1].date()),
+        "currency": currency,
+    }
+
+
 def build_one(sec, px: pd.Series, prof: dict, benchmarks: pd.DataFrame) -> dict:
     ps = price_stats(px)
     mk = markets.analyse(px, benchmarks) if len(px.dropna()) >= 60 else {}
-    ev = events.detect(px)
+    ev = events.detect(px, benchmarks)
+    q = quote(px, ((prof or {}).get("currency") or "HKD"))
 
     weekly = px.dropna().resample("W-FRI").last().dropna()
     series = [{"d": str(pd.Timestamp(i).date()), "v": round(float(v), 3)}
@@ -94,6 +116,7 @@ def build_one(sec, px: pd.Series, prof: dict, benchmarks: pd.DataFrame) -> dict:
         "board": sec.board,
         "name": (prof or {}).get("name") or sec.name,
         "profile": prof or {},
+        "quote": q,
         "price": ps,
         "markets": mk,
         "events": ev,

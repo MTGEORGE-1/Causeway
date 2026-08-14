@@ -54,7 +54,13 @@ def write(companies: list[dict], meta: dict, lineage: list) -> dict:
     for c in companies:
         p = c.get("profile") or {}
         mk = c.get("markets") or {}
+        q = c.get("quote") or {}
         index.append({
+            "px": q.get("price"),
+            "chg": q.get("change"),
+            "chgp": q.get("change_pct"),
+            "cur": q.get("currency"),
+            "asof": q.get("as_of"),
             "code": c["code"],
             "ticker": c["ticker"],
             "name": c["name"],
@@ -103,6 +109,10 @@ def write(companies: list[dict], meta: dict, lineage: list) -> dict:
             "rather than zero.",
             "Money is converted to USD at current spot. Financial figures come from "
             "Yahoo Finance and restatements are common.",
+            "Prices are the last close from the most recent build, not a live tick. "
+            "Every price carries the date it was taken. A genuinely live quote would need "
+            "a paid market-data feed, because a static page cannot call the free sources "
+            "directly from a browser.",
             "Nothing here is a forecast or investment advice.",
         ],
     }
