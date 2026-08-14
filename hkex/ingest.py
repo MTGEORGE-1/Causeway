@@ -243,7 +243,8 @@ def _officers(info: dict) -> list[dict]:
     return out[:8]
 
 
-def fetch_profiles(tickers: list[str], fx: dict, force: bool = False) -> dict:
+def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
+                   budget: int | None = None) -> dict:
     """Company profiles, fetched incrementally and politely.
 
     Yahoo's quote endpoint issues a crumb per session and rejects sustained
@@ -314,7 +315,10 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False) -> dict:
 
     out = dict(have)
     missing = [t for t in tickers if t not in out]
-    batch = missing[:PROFILE_BUDGET]
+    # budget=0 on intraday quote refreshes: touching this endpoint every 30
+    # minutes would exhaust the daily allowance and starve the nightly slice.
+    limit = PROFILE_BUDGET if budget is None else budget
+    batch = missing[:limit]
     done["n"], done["pass"], done["todo"] = 0, 1, len(batch)
 
     if batch:

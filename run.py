@@ -25,6 +25,11 @@ def main() -> int:
     ap.add_argument("--force", action="store_true")
     ap.add_argument("--limit", type=int, default=0,
                     help="only process the first N codes (development)")
+    ap.add_argument("--quotes", action="store_true",
+                    help="intraday refresh: re-fetch prices, leave profiles alone. "
+                         "Profiles come from a rate-limited endpoint, so a run every "
+                         "30 minutes must not touch it or it burns the daily budget "
+                         "and the nightly slice gets nothing.")
     args = ap.parse_args()
 
     t0 = time.time()
@@ -67,11 +72,13 @@ def main() -> int:
                 s.code)
 
     tickers = sorted((s.ticker for s in secs), key=priority)
-    prices = ingest.fetch_prices(tickers, force=args.force)
+    prices = ingest.fetch_prices(tickers, force=args.force or args.quotes)
     print(f"      prices     {prices.shape[1]}/{len(tickers)} tickers, {len(prices)} days")
 
-    profiles = ingest.fetch_profiles(tickers, fx, force=args.force)
-    print(f"      profiles   {len(profiles)}/{len(tickers)}")
+    profiles = ingest.fetch_profiles(tickers, fx, force=args.force,
+                                     budget=0 if args.quotes else None)
+    print(f"      profiles   {len(profiles)}/{len(tickers)}"
+          f"{'  (unchanged — quotes-only run)' if args.quotes else ''}")
 
     print("[3/5] analyze")
     import pandas as pd

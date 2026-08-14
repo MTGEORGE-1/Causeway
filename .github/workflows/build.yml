@@ -8,9 +8,14 @@
 name: Build and deploy
 
 on:
-  # 22:00 UTC on weekdays — after the US close, so the ADR leg has settled.
-  # That is 06:00 next-day China time, well after the mainland and HK closes.
   schedule:
+    # Intraday quote refresh, every 30 minutes through the Hong Kong session.
+    # HKT is UTC+8, so 09:30-16:00 local is 01:30-08:00 UTC. Prices only —
+    # the profile endpoint is rate-limited and must not be touched this often.
+    - cron: "*/30 1-8 * * 1-5"
+    # Full nightly build: refreshes everything and takes the next slice of
+    # company profiles. 22:00 UTC is after the US close and well clear of the
+    # next Hong Kong open.
     - cron: "0 22 * * 1-5"
   # Lets you trigger a build by hand from the Actions tab.
   workflow_dispatch:
@@ -58,13 +63,15 @@ jobs:
       # sources may work here even though they fail on the laptop. Allowed to
       # fail — it is a probe, not a dependency. Read the uploaded JSON to find
       # out, then widen the universe in transmission/universe.py if it passes.
+      # Only worth running on the nightly pass, not every 30 minutes.
       - name: Probe data sources (is the A-share leg reachable from CI?)
+        if: github.event.schedule != '*/30 1-8 * * 1-5'
         continue-on-error: true
         timeout-minutes: 10
         run: python phase0_data_audit.py
 
       - name: Upload audit results
-        if: always()
+        if: always() && github.event.schedule != '*/30 1-8 * * 1-5'
         uses: actions/upload-artifact@v4
         with:
           name: data-source-audit
@@ -72,8 +79,17 @@ jobs:
           if-no-files-found: warn
           retention-days: 30
 
-      - name: Build engine
-        run: python run.py --force
+      # Intraday runs refresh prices only. Everything else — nightly, manual,
+      # and pushes to main — does the full build including the profile slice.
+      - name: Build
+        run: |
+          if [ "${{ github.event.schedule }}" = "*/30 1-8 * * 1-5" ]; then
+            echo "Intraday quote refresh"
+            python run.py --quotes
+          else
+            echo "Full build"
+            python run.py
+          fi
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
