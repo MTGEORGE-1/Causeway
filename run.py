@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Crosscurrent — build.
+"""Causeway — build.
 
     python run.py            # use cache where fresh
     python run.py --force    # re-fetch everything (~8 min for the full board)
@@ -33,7 +33,7 @@ def main() -> int:
     args = ap.parse_args()
 
     t0 = time.time()
-    print("Crosscurrent — build\n" + "=" * 62)
+    print("Causeway — build\n" + "=" * 62)
 
     secs = securities.load()
     stamp = securities.as_of()
@@ -104,7 +104,7 @@ def main() -> int:
 
     print("[4/5] export")
     meta = {
-        "title": "Crosscurrent",
+        "title": "Causeway",
         "subtitle": "Every company listed on the Hong Kong Stock Exchange — what it "
                     "does, who runs it, and which market actually moves it.",
         "generated_at": pd.Timestamp.now().isoformat(timespec="seconds"),
