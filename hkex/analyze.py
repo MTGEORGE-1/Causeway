@@ -24,13 +24,20 @@ def price_stats(s: pd.Series) -> dict:
     out["volatility"] = float(lr.std() * np.sqrt(TRADING_DAYS))
     out["max_drawdown"] = float((s / s.cummax() - 1).min())
 
-    for lbl, days in (("1y", 365), ("3y", 365 * 3), ("5y", 365 * 5)):
-        w = s[s.index >= s.index.max() - pd.Timedelta(days=days)]
-        if len(w) > 20 and w.iloc[0] > 0:
-            yrs = (w.index[-1] - w.index[0]).days / 365.25
-            out[f"return_{lbl}"] = float(w.iloc[-1] / w.iloc[0] - 1)
-            if yrs >= 0.9:
-                out[f"cagr_{lbl}"] = float((w.iloc[-1] / w.iloc[0]) ** (1 / yrs) - 1)
+    for lbl, years in (("1y", 1), ("3y", 3), ("5y", 5)):
+        w = s[s.index >= s.index.max() - pd.Timedelta(days=365 * years)]
+        if len(w) <= 20 or w.iloc[0] <= 0:
+            continue
+        yrs = (w.index[-1] - w.index[0]).days / 365.25
+        # A window is only published under its label if the history actually
+        # covers it. CATL listed in May 2025, and its 1.2 years of history was
+        # shipping unchanged as both return_3y and return_5y — the same number
+        # under two labels, neither of them true.
+        if yrs < years * 0.85:
+            continue
+        out[f"return_{lbl}"] = float(w.iloc[-1] / w.iloc[0] - 1)
+        out[f"cagr_{lbl}"] = float((w.iloc[-1] / w.iloc[0]) ** (1 / yrs) - 1)
+        out[f"span_{lbl}"] = round(yrs, 2)
 
     w52 = s[s.index >= s.index.max() - pd.Timedelta(days=365)]
     if len(w52):

@@ -309,16 +309,16 @@ def _legacy_yield(v):
     return frac if 0 < frac <= 0.5 else None
 
 
-import re
+def _officers(info: dict) -> list[dict]:
+    """Named executives, most senior first.
 
-
-def _rank_title(title: str) -> int:
-    """Seniority from a job title, most senior first.
-
-    Yahoo returns officers unranked and with wordy titles, so the CEO has to be
-    identified from the text if the panel is to be worth reading.
+    Yahoo returns them unranked and with wordy titles, so seniority is inferred
+    from the title text — the CEO must be the first row for the panel to be
+    worth reading.
     """
-    if True:
+    import re
+
+    def rank(title: str) -> int:
         t = (title or "").lower()
         # Split on non-letters so punctuation cannot hide a word. "Group CEO,
         # Member of the Board" tokenised on whitespace yields "ceo," which
@@ -361,24 +361,15 @@ def _rank_title(title: str) -> int:
             return 7
         return 8
 
-def _officers(info: dict) -> list[dict]:
-    """Named executives, most senior first."""
-    return _rank_officers(info.get("companyOfficers") or [])
-
-
-def _rank_officers(rows: list[dict]) -> list[dict]:
-    """Sort and trim an officer list. Used both at fetch time and when
-    repairing a cached record, so a ranking fix reaches the ~1,500 profiles
-    already on disk without re-fetching them through a rate-limited endpoint."""
     out = []
-    for o in (rows or []):
+    for o in (info.get("companyOfficers") or []):
         name = (o.get("name") or "").strip()
         title = (o.get("title") or "").strip()
         if not name:
             continue
         out.append({"name": " ".join(name.split()), "title": title,
                     "age": o.get("age"), "pay": o.get("totalPay"),
-                    "_r": _rank_title(title)})
+                    "_r": rank(title)})
     out.sort(key=lambda x: x["_r"])
     for o in out:
         o.pop("_r", None)
@@ -454,10 +445,6 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
                 "website": info.get("website"),
                 "employees": _pick(info, "fullTimeEmployees"),
                 "currency": cur_m,
-                # Recorded so a conversion can be audited later. Its absence is
-                # why Manulife's CAD revenue could not be repaired from cache
-                # and needed a re-fetch.
-                "financial_currency": cur_f,
                 "market_cap_usd": _to_usd(_pick(info, "marketCap"), rm),
                 "revenue_usd": _to_usd(_pick(info, "totalRevenue"), rf),
                 "revenue_growth": _pick(info, "revenueGrowth"),
@@ -495,12 +482,7 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
     # budget=0 on intraday quote refreshes: touching this endpoint every 30
     # minutes would exhaust the daily allowance and starve the nightly slice.
     limit = PROFILE_BUDGET if budget is None else budget
-    # Stale before missing. A stale record is one already on the site, carrying
-    # figures a reader can see now — correcting those matters more than adding
-    # coverage for a company nobody has looked up yet. Currency in particular
-    # cannot be repaired from cache: the reporting currency was never stored,
-    # so only a re-fetch fixes Manulife-style conversions.
-    batch = (stale + missing)[:limit]
+    batch = (missing + stale)[:limit]
     done["n"], done["pass"], done["todo"] = 0, 1, len(batch)
 
     if batch:
@@ -510,22 +492,12 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
                     out[t] = rec
         p.write_text(json.dumps(out, ensure_ascii=False))
 
-    # Repair what can be repaired without re-fetching. The queue moves at 450 a
-    # run against a rate-limited endpoint, so waiting for it would leave known
-    # defects on the published site for days. Anything derivable from what is
-    # already cached is fixed here instead.
+    # Records still on the old schema get their yield salvaged where the units
+    # are unambiguous and blanked where they are not, until the refresh queue
+    # reaches them.
     for rec in out.values():
-        if rec.get("_v", 0) >= PROFILE_SCHEMA:
-            continue
-        rec["dividend_yield"] = _legacy_yield(rec.get("dividend_yield"))
-        # Re-rank against the corrected seniority rules — the stored order put
-        # divisional chief executives above group ones.
-        if rec.get("officers"):
-            rec["officers"] = _rank_officers(rec["officers"])
-        # Yahoo returns exactly 0.0 gross margin for banks and insurers, where
-        # the measure does not apply. Absent is true; zero is not.
-        if rec.get("gross_margin") == 0:
-            rec["gross_margin"] = None
+        if rec.get("_v", 0) < PROFILE_SCHEMA:
+            rec["dividend_yield"] = _legacy_yield(rec.get("dividend_yield"))
 
     gained = len(out) - len(have)
     still = len(tickers) - len(out)
