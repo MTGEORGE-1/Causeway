@@ -27,6 +27,10 @@ ROOT = Path(__file__).resolve().parent.parent
 CACHE = ROOT / "data" / "hkcache"
 CACHE.mkdir(parents=True, exist_ok=True)
 
+# Committed profile coverage, so CI and a fresh clone do not start from zero.
+# Refresh it with `python tools/update_seed.py`.
+SEED = ROOT / "seed" / "profiles.json"
+
 YEARS = 5
 TTL_HOURS = 20
 BATCH = 150
@@ -186,21 +190,52 @@ def _pick(d: dict, *keys):
     return None
 
 
-def _yield(v):
-    """Normalise dividend yield to a fraction.
+PROFILE_SCHEMA = 2
 
-    yfinance switched this field from a fraction (0.0115) to a percentage
-    (1.15) and both forms still appear depending on the ticker. Rendered
-    without this, Tencent's ~1.2% yield displays as 115%. Nothing pays over
-    50%, so anything above that is certainly the percentage form.
-    """
-    if v is None:
-        return None
+
+def _num(v):
     try:
-        v = float(v)
+        f = float(v)
+        return f if f == f else None       # reject NaN
     except (TypeError, ValueError):
         return None
-    return v / 100 if v > 0.5 else v
+
+
+def _dividend_yield(info: dict):
+    """Dividend yield as a plain fraction, computed rather than guessed.
+
+    `dividendYield` from Yahoo is a percentage — BYD returns 0.47 for 0.47%,
+    confirmed against its own dividendRate 0.41 over a price of 88.25. That is
+    indistinguishable by inspection from a fraction meaning 47%, and an earlier
+    threshold rule got BYD wrong by a factor of a hundred.
+
+    `dividendRate / price` has no such ambiguity: both are in the listing
+    currency and the ratio is a fraction by construction. The percentage field
+    is used only as a fallback, and only above 0.5 where the units cannot be
+    mistaken.
+    """
+    rate = _num(info.get("dividendRate"))
+    price = _num(info.get("currentPrice")) or _num(info.get("regularMarketPrice"))
+    if rate and price and price > 0:
+        return rate / price
+    y = _num(info.get("dividendYield"))
+    if y is None:
+        return None
+    return y / 100 if y > 0.5 else None    # below 0.5 the units are unknowable
+
+
+def _legacy_yield(v):
+    """Salvage a yield stored before yields were computed properly.
+
+    Anything above 0.5 must be the percentage form — no listed company yields
+    over 50% — so it converts cleanly. Below that the value could be either
+    form and there is no way to tell, so it is dropped. A blank cell is
+    recoverable; a figure that is wrong by 100x is not.
+    """
+    v = _num(v)
+    if v is None:
+        return None
+    return v / 100 if v > 0.5 else None
 
 
 def _officers(info: dict) -> list[dict]:
@@ -259,12 +294,26 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
     upstream throttles unpredictably.
     """
     p = CACHE / "profiles.json"
+
+    # Start from the committed seed, then let the local cache override it.
+    #
+    # The working cache lives under data/, which is gitignored, so a CI runner
+    # starts with nothing — and because the endpoint rate-limits by IP, it only
+    # ever collects a couple of hundred before being cut off. The deployed site
+    # was showing 182 profiles while this machine had 1,114. Committing the
+    # accumulated profiles as a seed means every environment starts from the
+    # same coverage and only fetches what is genuinely missing.
     have: dict = {}
+    if SEED.exists():
+        try:
+            have.update(json.loads(SEED.read_text()))
+        except Exception:
+            pass
     if p.exists():
         try:
-            have = json.loads(p.read_text())
+            have.update(json.loads(p.read_text()))
         except Exception:
-            have = {}
+            pass
     if not force and _fresh(p) and len(have) >= len(tickers) * 0.9:
         _record("profiles", "CACHED", len(have))
         return have
@@ -300,7 +349,8 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
                 "forward_pe": _pick(info, "forwardPE"),
                 "price_to_book": _pick(info, "priceToBook"),
                 "debt_to_equity": _pick(info, "debtToEquity"),
-                "dividend_yield": _yield(_pick(info, "dividendYield")),
+                "dividend_yield": _dividend_yield(info),
+                "_v": PROFILE_SCHEMA,
                 "free_cashflow_usd": (_pick(info, "freeCashflow") or 0) * rf or None,
                 "officers": _officers(info),
             }
@@ -315,10 +365,15 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
 
     out = dict(have)
     missing = [t for t in tickers if t not in out]
+    # Records written before the current schema are re-fetched too, after the
+    # genuinely missing ones. That is how the dividend-yield fix reaches the
+    # 1,100 companies already cached without re-fetching the whole board.
+    stale = [t for t in tickers
+             if t in out and out[t].get("_v", 0) < PROFILE_SCHEMA]
     # budget=0 on intraday quote refreshes: touching this endpoint every 30
     # minutes would exhaust the daily allowance and starve the nightly slice.
     limit = PROFILE_BUDGET if budget is None else budget
-    batch = missing[:limit]
+    batch = (missing + stale)[:limit]
     done["n"], done["pass"], done["todo"] = 0, 1, len(batch)
 
     if batch:
@@ -328,10 +383,12 @@ def fetch_profiles(tickers: list[str], fx: dict, force: bool = False,
                     out[t] = rec
         p.write_text(json.dumps(out, ensure_ascii=False))
 
-    # Applied on read as well as on fetch: records cached before this fix
-    # carry the raw upstream value, and re-fetching them is rate-limited.
+    # Records still on the old schema get their yield salvaged where the units
+    # are unambiguous and blanked where they are not, until the refresh queue
+    # reaches them.
     for rec in out.values():
-        rec["dividend_yield"] = _yield(rec.get("dividend_yield"))
+        if rec.get("_v", 0) < PROFILE_SCHEMA:
+            rec["dividend_yield"] = _legacy_yield(rec.get("dividend_yield"))
 
     gained = len(out) - len(have)
     still = len(tickers) - len(out)
