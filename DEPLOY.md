@@ -1,4 +1,4 @@
-# Deploying
+# Deploying Causeway
 
 The site is static. There is no backend, no server and no database — a scheduled
 job rebuilds one file each night and GitHub serves it.
@@ -16,7 +16,7 @@ Cost: **$0**. Both Actions and Pages are free at this scale.
 
 ### 1. Create the repo on GitHub
 
-Go to <https://github.com/new>. Name it `transmission` (or anything).
+Go to <https://github.com/new>. Name it `causeway`.
 **Do not** tick "Add a README" — this folder already has one.
 
 ### 2. Push
@@ -26,7 +26,7 @@ GitHub and push — substitute your username:
 
 ```bash
 cd "/Users/micahgeorge/Desktop/PROJECT "
-git remote add origin https://github.com/YOUR-USERNAME/transmission.git
+git remote add origin https://github.com/YOUR-USERNAME/causeway.git
 git branch -M main
 git push -u origin main
 ```
@@ -43,7 +43,7 @@ site directly, so there is no branch to deploy from.
 minutes. When it finishes your site is at:
 
 ```
-https://YOUR-USERNAME.github.io/transmission/
+https://YOUR-USERNAME.github.io/causeway/
 ```
 
 That URL is public. Anyone you send it to can open it — no account needed.
