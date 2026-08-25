@@ -45,6 +45,36 @@ Weekly rather than daily returns throughout: Hong Kong closes before New York op
 mainland runs a different holiday calendar, so daily co-movement understates these
 relationships for purely mechanical reasons.
 
+## Try a scenario
+
+Inside the market panel, set where you think the S&P 500, Hang Seng and CSI 300 land five
+years out. Causeway works through what that implies for the share price, year by year, with a
+range around it.
+
+The arithmetic runs in log space, because that is how the betas were fitted: an index moving
+L0 to L1 is a log return of `ln(L1/L0)`, the stock's implied log return is the sum of each
+sensitivity times its index's log return, and `exp()` converts back to a price.
+
+**The sensitivities are not the three betas shown above them.** Those are measured one index
+at a time, and the three indices largely move together — adding them up would count the same
+worldwide risk-on week three times over. The scenario uses a joint fit, where each coefficient
+is the effect of that index holding the other two still. For Tencent the single betas are 0.30
+/ 1.33 / 1.19; jointly they are −0.18 / 1.40 / −0.07, which says the mainland relationship was
+Hong Kong's all along.
+
+Two deliberate choices:
+
+- **Alpha is excluded.** Carrying five years of past company-specific drift into a forward
+  projection would bake in a prediction the user never made.
+- **The range is the residual.** Whatever the indices do not explain, scaled by the square root
+  of the horizon — roughly two outcomes in three.
+
+Where the indices explain under 20% of a stock's movement, the panel says so before showing
+any number. That is **2,165 of 2,629 companies** — most of the board is not market-driven, and
+the tool should say so rather than let someone read meaning into a number that has none.
+
+It is arithmetic on a historical relationship, not a forecast.
+
 ## Chart annotations are detected, not written
 
 Hand-authoring notes for 2,716 companies is not possible, and doing it for the famous twenty

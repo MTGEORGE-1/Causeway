@@ -161,6 +161,42 @@
     font-size:15.5px}
   .gap b{color:var(--ink)}
 
+
+  /* scenario tool */
+  .scen{border-top:1px solid var(--rule);background:#fff}
+  .scen-toggle{width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    font-family:var(--sans);font-size:16px;color:var(--red);font-weight:500;
+    padding:14px 20px;display:flex;align-items:center;gap:9px}
+  .scen-toggle:hover{background:var(--panel)}
+  .scen-toggle .car{transition:transform .18s;display:inline-block;font-size:13px}
+  .scen-toggle.open .car{transform:rotate(90deg)}
+  .scen-body{padding:4px 20px 20px;display:none}
+  .scen-body.open{display:block}
+  .scen-lead{font-size:15px;color:var(--soft);margin:0 0 16px;max-width:70ch}
+  .scen-inputs{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:12px;margin-bottom:18px}
+  .si{border:1px solid var(--rule);border-radius:9px;padding:12px 14px}
+  .si .who{font-size:12.5px;font-weight:600;letter-spacing:.06em;text-transform:uppercase}
+  .si.us .who{color:var(--us)} .si.hk .who{color:var(--hk)} .si.cn .who{color:var(--cn)}
+  .si .now{font-size:12.5px;color:var(--faint);margin:2px 0 7px}
+  .si input{width:100%;padding:8px 10px;font-size:17px;font-family:var(--sans);
+    border:1px solid var(--rule);border-radius:7px;color:var(--ink);outline:none;
+    font-variant-numeric:tabular-nums}
+  .si input:focus{border-color:var(--red)}
+  .si .chg{font-size:12.5px;margin-top:5px;font-variant-numeric:tabular-nums}
+  .si .beta{font-size:12px;color:var(--faint);margin-top:3px}
+  .scen-actions{display:flex;gap:10px;margin-bottom:16px;flex-wrap:wrap}
+  .scen-actions button{border:1px solid var(--rule);background:#fff;color:var(--soft);
+    padding:5px 13px;border-radius:16px;font-size:14px;cursor:pointer;font-family:var(--sans)}
+  .scen-actions button:hover{border-color:var(--ink);color:var(--ink)}
+  .scen table{margin-bottom:10px}
+  .scen td.px{font-weight:600;color:var(--ink)}
+  .scen .band{font-size:12.5px;color:var(--faint);font-variant-numeric:tabular-nums}
+  .scen-note{font-size:13.5px;color:var(--faint);line-height:1.5;margin:10px 0 0;
+    padding-top:12px;border-top:1px solid var(--rule)}
+  .scen-warn{background:var(--panel);border-left:3px solid var(--brass);padding:10px 14px;
+    font-size:13.5px;color:var(--soft);border-radius:0 7px 7px 0;margin-bottom:14px}
+
   /* c-suite */
   .people{display:grid;grid-template-columns:repeat(auto-fit,minmax(232px,1fr));gap:11px}
   .p{border:1px solid var(--rule);border-radius:9px;padding:13px 15px}
@@ -436,7 +472,161 @@
         <div class="s">Weekly returns regressed on each index — ${esc(dr.label||'')}</div></div>
       <div class="mk-grid">${card('us')}${card('hk')}${card('cn')}</div>
       <div class="gap"><b>Mainland vs Hong Kong:</b> ${esc(gap.verdict||'—')}</div>
+      ${scenarioBlock(mk)}
     </div>`;
+  }
+
+  /* ---------- scenario tool ---------- */
+  function scenarioBlock(mk){
+    const j = mk.joint;
+    if(!j || !j.betas || !Object.keys(j.betas).length) return '';
+    const lv = (D.meta.benchmark_levels)||{};
+    const inputs = ['us','hk','cn'].filter(k=>k in j.betas && lv[k]).map(k=>`
+      <div class="si ${k}">
+        <div class="who">${esc(MK[k].n)}</div>
+        <div class="now">now ${lv[k].toLocaleString(undefined,{maximumFractionDigits:0})}</div>
+        <input type="text" inputmode="decimal" data-mk="${k}"
+               value="${Math.round(lv[k])}" aria-label="${esc(MK[k].n)} level in 5 years">
+        <div class="chg" data-chg="${k}"></div>
+        <div class="beta">sensitivity ${j.betas[k].toFixed(2)} &middot; others held</div>
+      </div>`).join('');
+    if(!inputs) return '';
+    return `<div class="scen">
+      <button class="scen-toggle" id="scenToggle">
+        <span class="car">▶</span> Try a scenario — where do you think these markets go?
+      </button>
+      <div class="scen-body" id="scenBody">
+        <p class="scen-lead">Set where you think each index lands five years from now.
+          Causeway works out what that implies for this share price, from how the stock has
+          actually moved with those indices. Weak relationship, small effect.<br>
+          <span style="color:var(--faint);font-size:14px">The sensitivities below are not the
+          betas above. Those measure each index on its own, and the three indices largely move
+          together — so adding them up would count the same worldwide week three times. These
+          are fitted jointly, meaning each is the effect of that index <em>while the other two
+          stay where you set them</em>, which is what these boxes ask. A sensitivity can come
+          out near zero or negative: that index adds nothing once the others are known.</span></p>
+        <div class="scen-inputs">${inputs}</div>
+        <div class="scen-actions">
+          <button data-preset="reset">Reset to today</button>
+          <button data-preset="bull">Bull · +50%</button>
+          <button data-preset="base">Base · +7%/yr</button>
+          <button data-preset="bear">Bear · −30%</button>
+        </div>
+        <div id="scenOut"></div>
+      </div>
+    </div>`;
+  }
+
+
+  /* ---------- scenario maths ----------
+     Betas were fitted on weekly LOG returns, so the projection has to work in
+     logs too. An index moving L0 -> L1 is a log return of ln(L1/L0); the stock's
+     implied log return is the sum of each beta times its index's log return.
+     Converting back with exp() gives the price.
+
+     Alpha is deliberately excluded. It is the stock's average drift once the
+     indices are accounted for, and carrying five years of past idiosyncratic
+     drift into a forward projection would quietly bake in a prediction the user
+     never made. The output answers only "if the markets do this, what does the
+     market relationship imply", which is the question the inputs ask. */
+  function wireScenario(c){
+    const mk=c.markets||{}, j=mk.joint;
+    const toggle=document.getElementById('scenToggle');
+    if(!toggle||!j) return;
+    const body=document.getElementById('scenBody'), out=document.getElementById('scenOut');
+    const lv=D.meta.benchmark_levels||{};
+    const p0=(c.quote||{}).price;
+    const keys=Object.keys(j.betas||{}).filter(k=>lv[k]);
+
+    toggle.addEventListener('click',()=>{
+      const open=body.classList.toggle('open');
+      toggle.classList.toggle('open',open);
+      if(open) recompute();
+    });
+
+    function levels(){
+      const o={};
+      document.querySelectorAll('#scenBody input[data-mk]').forEach(el=>{
+        const v=parseFloat(String(el.value).replace(/[^0-9.\-]/g,''));
+        o[el.dataset.mk]=isFinite(v)&&v>0?v:null;
+      });
+      return o;
+    }
+
+    function recompute(){
+      const L=levels();
+      keys.forEach(k=>{
+        const el=document.querySelector(`[data-chg="${k}"]`);
+        if(!el) return;
+        if(L[k]==null){el.textContent='';return;}
+        const ch=L[k]/lv[k]-1;
+        el.textContent=`${ch>=0?'+':''}${(ch*100).toFixed(1)}% over 5 years`;
+        el.style.color=ch>=0?'var(--up)':'var(--down)';
+      });
+
+      if(p0==null){
+        out.innerHTML='<div class="scen-warn">No current price for this company, '+
+          'so a projection cannot be anchored.</div>';return;
+      }
+      // Total five-year log return implied for the stock.
+      let total=0, missing=false;
+      keys.forEach(k=>{
+        if(L[k]==null){missing=true;return;}
+        total += j.betas[k]*Math.log(L[k]/lv[k]);
+      });
+      if(missing){out.innerHTML='<div class="scen-warn">Enter a level for each index.</div>';return;}
+
+      const sig=j.residual_vol_weekly||0;
+      let rows='';
+      for(let t=1;t<=5;t++){
+        const frac=t/5;
+        const s_t=total*frac;
+        const px=p0*Math.exp(s_t);
+        const band=sig*Math.sqrt(52*t);           // residual grows with the horizon
+        const lo=px*Math.exp(-band), hi=px*Math.exp(band);
+        const ch=px/p0-1;
+        const idx=keys.map(k=>{
+          const lvl=lv[k]*Math.exp(Math.log(L[k]/lv[k])*frac);
+          return `<td class="band">${lvl.toLocaleString(undefined,{maximumFractionDigits:0})}</td>`;
+        }).join('');
+        rows+=`<tr><td>Year ${t}</td>${idx}
+          <td class="px">HK$${px.toFixed(2)}</td>
+          <td class="${ch>=0?'up':'dn'}">${ch>=0?'+':''}${(ch*100).toFixed(1)}%</td>
+          <td class="band">${lo.toFixed(2)} – ${hi.toFixed(2)}</td></tr>`;
+      }
+      const r2=j.r_squared;
+      const weak=r2!=null&&r2<0.2;
+      out.innerHTML=`
+        ${weak?`<div class="scen-warn"><b>These indices explain only
+          ${(r2*100).toFixed(0)}% of this stock's movement.</b> Whatever you enter,
+          the effect shown is small — and most of what actually happens to this share
+          price has nothing to do with these markets.</div>`:''}
+        <table>
+          <tr><th>Horizon</th>${keys.map(k=>`<th>${esc(MK[k].n)}</th>`).join('')}
+            <th>Implied price</th><th>Change</th><th>Range</th></tr>
+          ${rows}
+        </table>
+        <p class="scen-note">Implied price applies this stock's measured sensitivity to each
+          index — ${keys.map(k=>`${esc(MK[k].n)} ${j.betas[k].toFixed(2)}`).join(', ')} — to the
+          moves you entered, holding the other indices at what you set. Those indices together
+          explain ${r2==null?'—':(r2*100).toFixed(0)+'%'} of its weekly movement over
+          ${j.n_weeks} weeks; the rest is company-specific and is what the range covers
+          (roughly two outcomes in three). This is arithmetic on a historical relationship,
+          not a forecast — the relationship itself can change, and company news is not in it.</p>`;
+    }
+
+    document.querySelectorAll('#scenBody input[data-mk]').forEach(el=>{
+      el.addEventListener('input',recompute);
+    });
+    document.querySelectorAll('#scenBody .scen-actions button').forEach(b=>{
+      b.addEventListener('click',()=>{
+        const mult={reset:1,bull:1.5,base:Math.pow(1.07,5),bear:0.7}[b.dataset.preset];
+        document.querySelectorAll('#scenBody input[data-mk]').forEach(el=>{
+          el.value=Math.round(lv[el.dataset.mk]*mult);
+        });
+        recompute();
+      });
+    });
   }
 
   /* ---------- detail ---------- */
@@ -534,6 +724,7 @@
 
     document.getElementById('back').onclick=()=>{location.hash='';};
     wireChart(c.series);
+    wireScenario(c);
   }
 
   function route(){

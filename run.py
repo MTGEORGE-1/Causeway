@@ -112,6 +112,16 @@ def main() -> int:
         "n_companies": len(companies),
         "benchmarks": {k: v["label"] for k, v in ingest.BENCHMARKS.items()
                        if k in bench.columns},
+        # Current index levels seed the scenario tool's inputs, so a reader
+        # starts from where the market actually is rather than a blank box.
+        "benchmark_levels": {
+            k: round(float(bench[k].dropna().iloc[-1]), 2)
+            for k in ("us", "hk", "cn") if k in bench.columns
+            and len(bench[k].dropna())},
+        "benchmark_as_of": {
+            k: str(bench[k].dropna().index[-1].date())
+            for k in ("us", "hk", "cn") if k in bench.columns
+            and len(bench[k].dropna())},
         "fx": fx,
     }
     stats = export.write(companies, meta, ingest.LINEAGE)

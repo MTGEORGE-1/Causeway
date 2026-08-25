@@ -51,6 +51,55 @@ def _regress(y: pd.Series, x: pd.Series) -> dict:
             "n_weeks": int(len(j))}
 
 
+
+def _multi_regress(y: pd.Series, xs: dict[str, pd.Series]) -> dict:
+    """Regress the stock on all three indices at once.
+
+    The scenario tool needs this rather than the three single-index betas.
+    Those are each measured with the other two ignored, so the same worldwide
+    risk-on week is counted in all three; adding them up to answer "if the S&P
+    does X and the Hang Seng does Y" would double- and triple-count the move.
+    A joint fit apportions it — each coefficient is the effect of that index
+    holding the other two still, which is the question the tool actually asks.
+
+    The cost is that correlated regressors make individual coefficients less
+    stable, and one can even come out negative. That is real, not a bug: it
+    says the index adds nothing once the others are known.
+    """
+    cols = [k for k, v in xs.items() if v is not None and len(v)]
+    if not cols:
+        return {}
+    frame = pd.concat([y.rename("y")] + [xs[k].rename(k) for k in cols],
+                      axis=1, join="inner").dropna()
+    if len(frame) < MIN_WEEKS:
+        return {}
+
+    Y = frame["y"].to_numpy()
+    X = frame[cols].to_numpy()
+    A = np.column_stack([np.ones(len(X)), X])       # intercept + factors
+    try:
+        coef, *_ = np.linalg.lstsq(A, Y, rcond=None)
+    except np.linalg.LinAlgError:
+        return {}
+
+    fitted = A @ coef
+    resid = Y - fitted
+    ss_res = float((resid ** 2).sum())
+    ss_tot = float(((Y - Y.mean()) ** 2).sum())
+    r2 = 1 - ss_res / ss_tot if ss_tot > 0 else None
+
+    return {
+        "betas": {k: float(coef[i + 1]) for i, k in enumerate(cols)},
+        "alpha_weekly": float(coef[0]),
+        "r_squared": r2,
+        # Weekly standard deviation of what the indices do NOT explain. It is
+        # what turns a single projected price into an honest range.
+        "residual_vol_weekly": float(resid.std(ddof=len(cols) + 1)),
+        "n_weeks": int(len(frame)),
+        "factors": cols,
+    }
+
+
 def analyse(px: pd.Series, benchmarks: pd.DataFrame) -> dict:
     y = _weekly(px.dropna())
     out: dict = {}
@@ -69,6 +118,9 @@ def analyse(px: pd.Series, benchmarks: pd.DataFrame) -> dict:
         "verdict": _gap_verdict(gap, cn, hk),
     }
     out["driver"] = _driver(out)
+    out["joint"] = _multi_regress(
+        y, {k: (_weekly(benchmarks[k].dropna()) if k in benchmarks.columns else None)
+            for k in ("us", "hk", "cn")})
     return out
 
 
