@@ -243,7 +243,7 @@
     <div class="searchbar">
       <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
       <input id="q" type="text" autocomplete="off" spellcheck="false"
-             placeholder="Search the whole exchange — 0700, Tencent, HSBC, 1211…">
+             placeholder="Search the whole exchange: 0700, Tencent, HSBC, 1211…">
     </div>
     <div class="filters" id="boardF"></div>
     <div class="filters" id="drivF"></div>
@@ -263,13 +263,13 @@
     'Run <b>python run.py</b> first.</div>';return;}
 
   const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const money=v=>{if(v==null||!isFinite(v))return '—';const a=Math.abs(v),g=v<0?'-':'';
+  const money=v=>{if(v==null||!isFinite(v))return 'n/a';const a=Math.abs(v),g=v<0?'-':'';
     if(a>=1e12)return g+'$'+(a/1e12).toFixed(2)+'T';
     if(a>=1e9)return g+'$'+(a/1e9).toFixed(1)+'B';
     if(a>=1e6)return g+'$'+(a/1e6).toFixed(0)+'M';return g+'$'+a.toFixed(0);};
-  const pct=v=>v==null||!isFinite(v)?'—':(v*100).toFixed(1)+'%';
-  const pctS=v=>v==null||!isFinite(v)?'—':(v>0?'+':'')+(v*100).toFixed(1)+'%';
-  const num=(v,d)=>v==null||!isFinite(v)?'—':v.toFixed(d==null?2:d);
+  const pct=v=>v==null||!isFinite(v)?'n/a':(v*100).toFixed(1)+'%';
+  const pctS=v=>v==null||!isFinite(v)?'n/a':(v>0?'+':'')+(v*100).toFixed(1)+'%';
+  const num=(v,d)=>v==null||!isFinite(v)?'n/a':v.toFixed(d==null?2:d);
   const MK={us:{n:'United States',c:'var(--us)'},hk:{n:'Hong Kong',c:'var(--hk)'},
             cn:{n:'Mainland China',c:'var(--cn)'}};
   const EVCOL={high:'#137a4d',low:'#b3392e',drawdown:'#b3392e',spike:'#137a4d',
@@ -329,7 +329,7 @@
     document.getElementById('rows').innerHTML=slice.map(r=>{
       const d=r.driver||'none';
       const cc=r.chgp==null?'':(r.chgp>=0?'up':'dn');
-      const px=r.px==null?'—':`${(r.cur||'HKD')==='HKD'?'HK$':''}${r.px.toFixed(2)}`;
+      const px=r.px==null?'n/a':`${(r.cur||'HKD')==='HKD'?'HK$':''}${r.px.toFixed(2)}`;
       const mv=r.chgp==null?'':
         `${r.chg>=0?'+':''}${r.chg.toFixed(2)} (${(r.chgp*100).toFixed(2)}%)`;
       return `<div class="row" data-c="${esc(r.code)}">
@@ -338,7 +338,7 @@
           <div class="sub">${esc(r.sector||r.board)}</div></div>
         <div class="px">${px}</div>
         <div class="chg ${cc}">${mv}</div>
-        <div><span class="tagm t-${d}">${d==='none'?'—':esc(MK[d].n)}</span></div>
+        <div><span class="tagm t-${d}">${d==='none'?'n/a':esc(MK[d].n)}</span></div>
       </div>`;}).join('');
     document.getElementById('more').style.display=list.length>shown?'block':'none';
   }
@@ -460,18 +460,18 @@
          d.beta>=0.35?'partly follows it':'barely follows it');
       return `<div class="mkc ${k}">
         <div class="who">${esc(MK[k].n)}</div>
-        <div class="bench">vs ${esc((D.meta.benchmarks||{})[k]||'—')}</div>
+        <div class="bench">vs ${esc((D.meta.benchmarks||{})[k]||'n/a')}</div>
         <div class="big">${num(d.beta)}</div>
-        <div class="lbl">beta — ${lbl}</div>
+        <div class="lbl">beta, ${lbl}</div>
         <div class="bar"><span style="width:${Math.min(100,Math.max(1,(r2||0)*100)).toFixed(0)}%"></span></div>
-        <div class="r2">explains ${r2==null?'—':(r2*100).toFixed(0)+'%'} of weekly moves</div>
+        <div class="r2">explains ${r2==null?'n/a':(r2*100).toFixed(0)+'%'} of weekly moves</div>
       </div>`;};
     const gap=mk.gap||{},dr=mk.driver||{};
     return `<div class="mk">
       <div class="mk-head"><div class="t">Which market moves this stock</div>
-        <div class="s">Weekly returns regressed on each index — ${esc(dr.label||'')}</div></div>
+        <div class="s">Weekly returns regressed on each index. ${esc(dr.label||'')}</div></div>
       <div class="mk-grid">${card('us')}${card('hk')}${card('cn')}</div>
-      <div class="gap"><b>Mainland vs Hong Kong:</b> ${esc(gap.verdict||'—')}</div>
+      <div class="gap"><b>Mainland vs Hong Kong:</b> ${esc(gap.verdict||'n/a')}</div>
       ${scenarioBlock(mk)}
     </div>`;
   }
@@ -493,7 +493,7 @@
     if(!inputs) return '';
     return `<div class="scen">
       <button class="scen-toggle" id="scenToggle">
-        <span class="car">▶</span> Try a scenario — where do you think these markets go?
+        <span class="car">▶</span> Try a scenario: where do you think these markets go?
       </button>
       <div class="scen-body" id="scenBody">
         <p class="scen-lead">Set where you think each index lands five years from now.
@@ -501,7 +501,7 @@
           actually moved with those indices. Weak relationship, small effect.<br>
           <span style="color:var(--faint);font-size:14px">The sensitivities below are not the
           betas above. Those measure each index on its own, and the three indices largely move
-          together — so adding them up would count the same worldwide week three times. These
+          together, so adding them up would count the same worldwide week three times. These
           are fitted jointly, meaning each is the effect of that index <em>while the other two
           stay where you set them</em>, which is what these boxes ask. A sensitivity can come
           out near zero or negative: that index adds nothing once the others are known.</span></p>
@@ -599,7 +599,7 @@
       out.innerHTML=`
         ${weak?`<div class="scen-warn"><b>These indices explain only
           ${(r2*100).toFixed(0)}% of this stock's movement.</b> Whatever you enter,
-          the effect shown is small — and most of what actually happens to this share
+          the effect shown is small, and most of what actually happens to this share
           price has nothing to do with these markets.</div>`:''}
         <table>
           <tr><th>Horizon</th>${keys.map(k=>`<th>${esc(MK[k].n)}</th>`).join('')}
@@ -607,12 +607,12 @@
           ${rows}
         </table>
         <p class="scen-note">Implied price applies this stock's measured sensitivity to each
-          index — ${keys.map(k=>`${esc(MK[k].n)} ${j.betas[k].toFixed(2)}`).join(', ')} — to the
+          index (${keys.map(k=>`${esc(MK[k].n)} ${j.betas[k].toFixed(2)}`).join(', ')}) to the
           moves you entered, holding the other indices at what you set. Those indices together
-          explain ${r2==null?'—':(r2*100).toFixed(0)+'%'} of its weekly movement over
+          explain ${r2==null?'n/a':(r2*100).toFixed(0)+'%'} of its weekly movement over
           ${j.n_weeks} weeks; the rest is company-specific and is what the range covers
           (roughly two outcomes in three). This is arithmetic on a historical relationship,
-          not a forecast — the relationship itself can change, and company news is not in it.</p>`;
+          not a forecast. The relationship itself can change, and company news is not in it.</p>`;
     }
 
     document.querySelectorAll('#scenBody input[data-mk]').forEach(el=>{
@@ -659,7 +659,7 @@
       const r=ps['return_'+k],g=ps['cagr_'+k];
       if(r==null)return '';
       return `<tr><td>${l}</td><td class="${r>=0?'up':'dn'}">${pctS(r)}</td>
-        <td class="${g==null?'':(g>=0?'up':'dn')}">${g==null?'—':pctS(g)}</td></tr>`;}).join('');
+        <td class="${g==null?'':(g>=0?'up':'dn')}">${g==null?'n/a':pctS(g)}</td></tr>`;}).join('');
 
     const q=c.quote||{};
     const cur=(q.currency||'HKD')==='HKD'?'HK$':'';
@@ -672,10 +672,10 @@
         ${c.read&&c.read.length?`<p class="dread">${
           c.read.map(esc).join(' ')}</p>`:''}
         <div class="quotebar">
-          <span class="big">${q.price==null?'—':cur+q.price.toFixed(2)}</span>
+          <span class="big">${q.price==null?'n/a':cur+q.price.toFixed(2)}</span>
           <span class="mv ${qcls}">${q.change_pct==null?'':
             `${q.change>=0?'+':''}${q.change.toFixed(2)} (${(q.change_pct*100).toFixed(2)}%)`}</span>
-          <span class="asof">at close ${esc(q.as_of||'—')}</span>
+          <span class="asof">at close ${esc(q.as_of||'n/a')}</span>
         </div>
         <div class="dmeta"><b>${esc(c.code)}</b> · ${esc(c.ticker)} · ${esc(c.board)}
           ${p.employees?` · ${p.employees.toLocaleString()} employees`:''}
@@ -698,7 +698,7 @@
         ${c.events&&c.events.length?`<div class="evlist">${c.events.map((e,i)=>
           `<div class="ev"><span class="dot" style="background:${EVCOL[e.kind]||'#6b7f92'}"></span>
             <span class="d">${esc(e.date)}</span>
-            <span><b style="color:var(--ink)">${esc(e.title)}</b> — ${esc(e.detail)}
+            <span><b style="color:var(--ink)">${esc(e.title)}</b>: ${esc(e.detail)}
             ${e.context?` <span style="color:var(--soft)">${esc(e.context)}</span>`:''}</span>
           </div>`).join('')}</div>`:''}
       </div>
@@ -711,7 +711,7 @@
       <div class="box"><h3>Leadership</h3>
         ${off.length?`<div class="people">${off.map(o=>`<div class="p">
           <div class="nm">${esc(o.name)}</div>
-          <div class="ti">${esc(o.title||'—')}</div>
+          <div class="ti">${esc(o.title||'n/a')}</div>
           ${(o.age||o.pay)?`<div class="ex">${o.age?`age ${o.age}`:''}${
             o.age&&o.pay?' · ':''}${o.pay?`pay ${money(o.pay)}`:''}</div>`:''}
         </div>`).join('')}</div>`

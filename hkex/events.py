@@ -51,7 +51,7 @@ def _market_context(date, stock_move: float, bench: pd.DataFrame | None) -> str:
 
     same_way = (hk_move > 0) == (stock_move > 0)
     if abs(hk_move) >= MARKET_DAY and same_way:
-        return (f"The whole market moved that day — the Hang Seng was "
+        return (f"The whole market moved that day. The Hang Seng was "
                 f"{hk_move*100:+.1f}%, so this was not company-specific.")
     if abs(hk_move) < 0.005:
         return (f"The Hang Seng was flat that day ({hk_move*100:+.1f}%), so this "
@@ -91,7 +91,7 @@ def detect(s: pd.Series, bench: pd.DataFrame | None = None,
         events.append({
             "date": _fmt(trough), "price": float(s.loc[trough]), "kind": "drawdown",
             "priority": 2, "title": f"Worst drawdown, {depth*100:.0f}%",
-            "detail": f"The end of the deepest fall of the period — down "
+            "detail": f"The end of the deepest fall of the period, down "
                       f"{abs(depth)*100:.0f}% over about {months} months from its "
                       f"{_fmt(peak_before)} peak.",
             "context": ""})

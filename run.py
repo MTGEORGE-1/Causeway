@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Causeway — build.
+"""Causeway build.
 
     python run.py            # use cache where fresh
     python run.py --force    # re-fetch everything (~8 min for the full board)
@@ -33,19 +33,19 @@ def main() -> int:
     args = ap.parse_args()
 
     t0 = time.time()
-    print("Causeway — build\n" + "=" * 62)
+    print("Causeway build\n" + "=" * 62)
 
     secs = securities.load()
     stamp = securities.as_of()
     if args.limit:
         secs = secs[:args.limit]
-    print(f"[1/5] universe — {len(secs)} equities from ListOfSecurities.xlsx "
+    print(f"[1/5] universe: {len(secs)} equities from ListOfSecurities.xlsx "
           f"(HKEX as at {stamp})")
 
     print("[2/5] ingest")
     fx = ingest.fetch_fx(force=args.force)
     bench = ingest.fetch_benchmarks(force=args.force)
-    print(f"      benchmarks {list(bench.columns)} — {len(bench)} days")
+    print(f"      benchmarks {list(bench.columns)}, {len(bench)} days")
 
     # Profile coverage is rationed by Yahoo's rate limit and fills in over
     # several runs, so the order matters: the names someone is actually likely
@@ -78,7 +78,7 @@ def main() -> int:
     profiles = ingest.fetch_profiles(tickers, fx, force=args.force,
                                      budget=0 if args.quotes else None)
     print(f"      profiles   {len(profiles)}/{len(tickers)}"
-          f"{'  (unchanged — quotes-only run)' if args.quotes else ''}")
+          f"{'  (unchanged, quotes-only run)' if args.quotes else ''}")
 
     print("[3/5] analyze")
     import pandas as pd
@@ -105,7 +105,7 @@ def main() -> int:
     print("[4/5] export")
     meta = {
         "title": "Causeway",
-        "subtitle": "Every company listed on the Hong Kong Stock Exchange — what it "
+        "subtitle": "Every company listed on the Hong Kong Stock Exchange: what it "
                     "does, who runs it, and which market actually moves it.",
         "generated_at": pd.Timestamp.now().isoformat(timespec="seconds"),
         "hkex_as_of": stamp,
