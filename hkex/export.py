@@ -44,6 +44,54 @@ def _clean(o):
     return o
 
 
+# A single stock's weekly R-squared against a market index is low by nature:
+# most of what moves one company is its own news, which is why diversification
+# works at all. Reporting the fit only as a share of companies would therefore
+# read as a failure rate, and on an exchange whose long tail is barely-traded
+# shells it would mostly be measuring the tail. The same fit is reported here
+# by company, by market value, and across the largest listings.
+FIT_THRESHOLD = 0.20
+
+
+def _fit_quality(companies: list[dict]) -> dict:
+    """How much of each stock's weekly movement the three indices explain.
+
+    Computed at build time from the same joint regressions the scenario tool
+    projects with, so the figure quoted on the page and the figure behind any
+    individual projection cannot drift apart.
+    """
+    rows = []
+    for c in companies:
+        r2 = ((c.get("markets") or {}).get("joint") or {}).get("r_squared")
+        if r2 is None:
+            continue
+        rows.append((float(r2), float((c.get("profile") or {}).get("market_cap_usd") or 0.0)))
+    if not rows:
+        return {}
+
+    def median(vals):
+        v = sorted(vals); n = len(v)
+        return v[n // 2] if n % 2 else (v[n // 2 - 1] + v[n // 2]) / 2
+
+    def group(sub):
+        if not sub:
+            return None
+        return {"n": len(sub),
+                "median_r2": round(median([r for r, _ in sub]), 4),
+                "share_ge": round(sum(1 for r, _ in sub if r >= FIT_THRESHOLD) / len(sub), 4)}
+
+    by_cap = sorted((r for r in rows if r[1] > 0), key=lambda t: -t[1])
+    cap_tot = sum(m for _, m in by_cap)
+    cap_ge = sum(m for r, m in by_cap if r >= FIT_THRESHOLD)
+
+    return {"threshold": FIT_THRESHOLD,
+            "all": group(rows),
+            "top80": group(by_cap[:80]),
+            "top250": group(by_cap[:250]),
+            "cap_share_ge": round(cap_ge / cap_tot, 4) if cap_tot else None,
+            "n_with_cap": len(by_cap)}
+
+
 def write(companies: list[dict], meta: dict, lineage: list) -> dict:
     CO.mkdir(parents=True, exist_ok=True)
     ARTIFACTS.mkdir(parents=True, exist_ok=True)
@@ -87,6 +135,7 @@ def write(companies: list[dict], meta: dict, lineage: list) -> dict:
         "meta": _clean(meta),
         "index": _clean(index),
         "lineage": _clean(lineage),
+        "fit": _clean(_fit_quality(companies)),
         "limitations": [
             "Chart annotations are detected from the price series, not written by a "
             "human. They mark what is structurally notable (the peak, the trough, the "

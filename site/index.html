@@ -228,6 +228,24 @@
     .row{grid-template-columns:62px 1fr 92px;gap:9px}
     .row .num.hide,.row .tagm{display:none}
   }
+  .fitq{margin:2px 0 8px}
+  .fit-toggle{width:100%;text-align:left;background:none;border:none;cursor:pointer;
+    font-family:inherit;font-size:16px;color:var(--red-deep);padding:9px 0;
+    display:flex;align-items:center;gap:8px}
+  .fit-toggle:hover{color:var(--red)}
+  .fit-toggle .car{transition:transform .18s;display:inline-block;font-size:12px}
+  .fit-toggle.open .car{transform:rotate(90deg)}
+  .fit-body{display:none;padding:2px 0 14px}
+  .fit-body.open{display:block}
+  .fit-lead{margin:0 0 12px;color:var(--body);font-size:15px;line-height:1.55}
+  .fit-body table{width:100%;border-collapse:collapse;font-size:15px;margin-bottom:12px}
+  .fit-body th{text-align:left;font-weight:500;color:var(--soft);font-size:13px;
+    border-bottom:1px solid var(--rule);padding:5px 10px 5px 0}
+  .fit-body td{padding:6px 10px 6px 0;border-bottom:1px solid var(--rule);color:var(--ink)}
+  .fit-body td:first-child{color:var(--body)}
+  .fit-note{margin:0;color:var(--soft);font-size:14px;line-height:1.6;
+    background:var(--panel);border-left:3px solid var(--brass);padding:10px 14px}
+  .fit-note b{color:var(--ink)}
 </style>
 </head>
 <body>
@@ -238,6 +256,7 @@
       <h1 class="brand">Causeway <span class="cjk">銅鑼灣</span></h1>
       <p class="lede">A deep dive into the Hong Kong Stock Exchange.</p>
       <div class="rule-brass"></div>
+      <div class="fitq" id="fitq"></div>
     </header>
 
     <div class="searchbar">
@@ -727,6 +746,41 @@
     wireScenario(c);
   }
 
+  function renderFit(){
+    const f=D.fit||{}, el=document.getElementById('fitq');
+    if(!f.all||!f.top80){el.style.display='none';return;}
+    const pc=v=>v==null?'n/a':(v*100).toFixed(0)+'%';
+    const r2=v=>v==null?'n/a':v.toFixed(2);
+    const row=(lbl,g)=>g?`<tr><td>${lbl}</td><td>${g.n}</td>
+      <td>${r2(g.median_r2)}</td><td>${pc(g.share_ge)}</td></tr>`:'';
+    el.innerHTML=`
+      <button class="fit-toggle" id="fitToggle">
+        <span class="car">\u25B6</span> How well do these market relationships hold?
+      </button>
+      <div class="fit-body" id="fitBody">
+        <p class="fit-lead">Every projection here rests on a regression of one stock's weekly
+          returns against the S&amp;P 500, the Hang Seng and the CSI 300. R\u00B2 is how much of
+          that stock's movement the three indices explain. For a single company it is low by
+          nature, because most of what moves one business is its own news. That is also why
+          diversification works.</p>
+        <table>
+          <tr><th>Group</th><th>Companies</th><th>Median R\u00B2</th>
+            <th>R\u00B2 at or above ${r2(f.threshold)}</th></tr>
+          ${row('80 largest by market value',f.top80)}
+          ${row('250 largest by market value',f.top250)}
+          ${row('Every company with a fit',f.all)}
+        </table>
+        <p class="fit-note"><b>Companies clearing ${r2(f.threshold)} account for
+          ${pc(f.cap_share_ge)} of the exchange's total market value.</b> Counted one company
+          at a time the share is far smaller, because Hong Kong's long tail is thinly traded
+          shells that track nothing. Weighted by the money actually listed, the relationships
+          hold across most of the exchange. Both figures are computed from this site's own
+          fitted results when it builds.</p>
+      </div>`;
+    const b=document.getElementById('fitToggle'), y=document.getElementById('fitBody');
+    b.onclick=()=>{b.classList.toggle('open');y.classList.toggle('open');};
+  }
+
   function route(){
     const h=decodeURIComponent(location.hash.slice(1));
     if(h){showDetail(h);}
@@ -734,7 +788,7 @@
          document.getElementById('listview').style.display='block';}
   }
   window.addEventListener('hashchange',route);
-  render(); route();
+  renderFit(); render(); route();
 })();
 </script>
 </body>
