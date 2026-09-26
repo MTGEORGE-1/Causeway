@@ -128,12 +128,12 @@ def _gap_verdict(gap, cn, hk) -> str:
     if gap is None:
         return "Not enough overlapping history to compare."
     if gap > 0.08:
-        return ("Tracks the mainland more closely than Hong Kong — its price is set by "
+        return ("Tracks the mainland more closely than Hong Kong. Its price is set by "
                 "Chinese domestic sentiment and policy, not by local Hong Kong flows.")
     if gap < -0.08:
-        return ("Tracks Hong Kong more closely than the mainland — it lists in China's "
+        return ("Tracks Hong Kong more closely than the mainland. It lists in China's "
                 "orbit but trades on Hong Kong and global money.")
-    return ("Moves with Hong Kong and the mainland about equally — no clear separation "
+    return ("Moves with Hong Kong and the mainland about equally, with no clear separation "
             "between the two.")
 
 
@@ -150,10 +150,10 @@ def _driver(o: dict) -> dict:
     if r2 < 0.05:
         return {"market": None,
                 "label": "Moves on its own", "r_squared": r2,
-                "text": "No index explains much of its movement — this trades on "
+                "text": "No index explains much of its movement. It trades on "
                         "company-specific news rather than any market."}
     # .capitalize() would lowercase the rest — "The hong kong market".
     lead = names[top][0].upper() + names[top][1:]
     return {"market": top, "label": f"Driven by {names[top]}", "r_squared": r2,
             "text": f"{lead} explains {r2*100:.0f}% of its "
-                    "weekly movement — more than either of the others."}
+                    "weekly movement, more than either of the others."}

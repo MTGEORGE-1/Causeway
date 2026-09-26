@@ -28,7 +28,7 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 def main() -> None:
     if not (SITE / "data.js").exists():
-        raise SystemExit("site/data.js not found — run `python run.py` first.")
+        raise SystemExit("site/data.js not found. Run `python run.py` first.")
 
     socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("127.0.0.1", PORT), Handler) as httpd:

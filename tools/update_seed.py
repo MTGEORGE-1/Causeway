@@ -24,7 +24,7 @@ SEED = ROOT / "seed" / "profiles.json"
 
 def main() -> None:
     if not CACHE.exists():
-        raise SystemExit("No local cache yet — run `python run.py` first.")
+        raise SystemExit("No local cache yet. Run `python run.py` first.")
 
     cache = json.loads(CACHE.read_text())
     seed = {}
