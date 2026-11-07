@@ -1,6 +1,6 @@
 # Deploying Causeway
 
-The site is static. There is no backend, no server and no database — a scheduled
+The site is static. There is no backend, no server and no database. A scheduled
 job rebuilds one file each night and GitHub serves it.
 
 ```
@@ -17,12 +17,12 @@ Cost: **$0**. Both Actions and Pages are free at this scale.
 ### 1. Create the repo on GitHub
 
 Go to <https://github.com/new>. Name it `causeway`.
-**Do not** tick "Add a README" — this folder already has one.
+**Do not** tick "Add a README". This folder already has one.
 
 ### 2. Push
 
 A local git repo already exists here with everything committed. Point it at
-GitHub and push — substitute your username:
+GitHub and push, substituting your username:
 
 ```bash
 cd "/Users/micahgeorge/Desktop/PROJECT "
@@ -34,7 +34,7 @@ git push -u origin main
 ### 3. Turn on Pages
 
 In the repo: **Settings → Pages → Build and deployment → Source**, choose
-**GitHub Actions**. Not "Deploy from a branch" — the workflow uploads the built
+**GitHub Actions**. Not "Deploy from a branch". The workflow uploads the built
 site directly, so there is no branch to deploy from.
 
 ### 4. Run it once
@@ -46,7 +46,7 @@ minutes. When it finishes your site is at:
 https://YOUR-USERNAME.github.io/causeway/
 ```
 
-That URL is public. Anyone you send it to can open it — no account needed.
+That URL is public. Anyone you send it to can open it, no account needed.
 
 ---
 
@@ -79,14 +79,14 @@ locally:
 - `akshare: BYD daily history (002594)`
 - `akshare: SMIC daily history (688981)`
 
-**If those say `OK`**, the deployed site can carry the full mainland dataset —
+**If those say `OK`**, the deployed site can carry the full mainland dataset:
 Cambricon, Hygon, NAURA, AMEC, and the A-H premium feature. Worth doing, because
 Cambricon is the single cleanest illustration of the project's thesis. The
 universe already stores `a_share` codes for every name that has one, so wiring
 it up is an ingest change, not a rewrite.
 
 **If they say `FAIL`**, the endpoints rate-limit cloud IPs too, and the HK/ADR
-universe stays as it is. Not a problem — just worth knowing rather than guessing.
+universe stays as it is. Not a problem, just worth knowing rather than guessing.
 
 ---
 
@@ -96,7 +96,7 @@ universe stays as it is. Not a problem — just worth knowing rather than guessi
   regenerated every run, and committing them nightly would grow the repo by
   ~200KB a day for no benefit.
 - After cloning fresh, run `python run.py` once before opening
-  `site/index.html` locally — otherwise `data.js` does not exist yet and the
+  `site/index.html` locally. Otherwise `data.js` does not exist yet and the
   page will tell you so.
 - The published page makes no network calls of its own. It cannot break because
-  a data source is down; it can only go stale.
+  a data source is down. It can only go stale.
